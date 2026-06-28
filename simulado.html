@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulado de Ergometria 2024 — SBC/DERC</title>
+<style>
+  :root{
+    --ink:#16181d;
+    --paper:#f6f4ef;
+    --card:#fffdf9;
+    --line:#e3ddd1;
+    --muted:#6d6b63;
+    --pulse:#c4382f;       /* vermelho cardio */
+    --pulse-deep:#8f231c;
+    --good:#1f7a52;
+    --good-bg:#e7f4ec;
+    --bad:#b5362c;
+    --bad-bg:#fbe9e6;
+    --accent:#0d4f63;      /* azul ECG */
+    --gold:#b9892f;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    font-family:"Iowan Old Style","Palatino Linotype",Georgia,serif;
+    background:var(--paper);
+    color:var(--ink);
+    line-height:1.55;
+    min-height:100vh;
+    padding:env(safe-area-inset-top) 0 0;
+  }
+  .mono{font-family:"SFMono-Regular",ui-monospace,"Cascadia Mono",Menlo,Consolas,monospace}
+  .wrap{max-width:680px;margin:0 auto;padding:18px 18px 60px}
+
+  /* ---------- header ---------- */
+  header{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:12px;padding:6px 2px 14px;border-bottom:2px solid var(--ink);
+  }
+  .brand{display:flex;align-items:center;gap:10px}
+  .ecg{width:42px;height:26px;flex:none}
+  .ecg path{fill:none;stroke:var(--pulse);stroke-width:2.4;
+    stroke-linecap:round;stroke-linejoin:round;
+    stroke-dasharray:120;stroke-dashoffset:120;
+    animation:trace 2.2s ease-in-out forwards}
+  @keyframes trace{to{stroke-dashoffset:0}}
+  .brand h1{font-size:1.02rem;font-weight:700;letter-spacing:.2px;line-height:1.15}
+  .brand small{display:block;font-size:.68rem;color:var(--muted);
+    letter-spacing:.14em;text-transform:uppercase;font-family:inherit;margin-top:2px}
+  .reset{
+    font-family:inherit;font-size:.72rem;color:var(--muted);
+    background:none;border:1px solid var(--line);border-radius:20px;
+    padding:5px 11px;cursor:pointer;white-space:nowrap;letter-spacing:.04em
+  }
+  .reset:hover{color:var(--pulse);border-color:var(--pulse)}
+
+  /* ---------- progress ---------- */
+  .pbar-row{display:flex;align-items:center;gap:12px;margin:16px 2px 6px}
+  .pbar{flex:1;height:7px;background:#e7e1d5;border-radius:99px;overflow:hidden}
+  .pfill{height:100%;width:0;background:linear-gradient(90deg,var(--pulse),var(--gold));
+    border-radius:99px;transition:width .4s cubic-bezier(.3,.8,.3,1)}
+  .pcount{font-size:.74rem;color:var(--muted);letter-spacing:.06em;white-space:nowrap}
+
+  /* ---------- card ---------- */
+  .card{
+    background:var(--card);border:1px solid var(--line);
+    border-radius:var(--radius);padding:22px 20px 24px;margin-top:14px;
+    box-shadow:0 1px 0 #fff inset, 0 10px 30px -22px rgba(0,0,0,.4);
+    animation:rise .35s ease both
+  }
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+  .qtop{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
+  .qnum{font-family:"SFMono-Regular",ui-monospace,monospace;font-size:.72rem;
+    color:#fff;background:var(--ink);padding:3px 8px;border-radius:6px;letter-spacing:.05em}
+  .qtag{font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--accent);font-weight:700}
+  .qtext{font-size:1.12rem;line-height:1.5;margin:10px 0 4px;font-weight:600}
+  .qcase{font-size:1.0rem;color:#2b2d33;margin-bottom:14px;font-style:italic}
+
+  /* ---------- options ---------- */
+  .opts{display:flex;flex-direction:column;gap:9px;margin-top:6px}
+  .opt{
+    text-align:left;font-family:inherit;font-size:.98rem;color:var(--ink);
+    background:#fff;border:1.5px solid var(--line);border-radius:11px;
+    padding:13px 14px;cursor:pointer;display:flex;gap:11px;align-items:flex-start;
+    transition:border-color .15s, background .15s, transform .08s
+  }
+  .opt:hover:not(:disabled){border-color:var(--accent)}
+  .opt:active:not(:disabled){transform:scale(.992)}
+  .opt .key{font-family:"SFMono-Regular",ui-monospace,monospace;font-weight:700;
+    color:var(--accent);flex:none;width:1.1em}
+  .opt:disabled{cursor:default}
+  .opt.correct{border-color:var(--good);background:var(--good-bg)}
+  .opt.correct .key{color:var(--good)}
+  .opt.wrong{border-color:var(--bad);background:var(--bad-bg)}
+  .opt.wrong .key{color:var(--bad)}
+  .opt .mark{margin-left:auto;font-weight:700;flex:none}
+  .opt.correct .mark{color:var(--good)}
+  .opt.wrong .mark{color:var(--bad)}
+
+  /* open / self-assess (no options) */
+  .reveal-btn{
+    font-family:inherit;font-size:.95rem;font-weight:600;color:#fff;
+    background:var(--accent);border:none;border-radius:11px;
+    padding:13px 16px;cursor:pointer;width:100%;letter-spacing:.02em;
+    transition:background .15s,transform .08s
+  }
+  .reveal-btn:hover{background:#0a3f50}
+  .reveal-btn:active{transform:scale(.99)}
+  .selfrow{display:flex;gap:9px;margin-top:12px}
+  .selfrow button{flex:1;font-family:inherit;font-size:.9rem;font-weight:600;
+    border-radius:10px;padding:11px;cursor:pointer;border:1.5px solid var(--line);background:#fff}
+  .self-hit{color:var(--good);border-color:var(--good)}
+  .self-hit:hover{background:var(--good-bg)}
+  .self-miss{color:var(--bad);border-color:var(--bad)}
+  .self-miss:hover{background:var(--bad-bg)}
+
+  /* ---------- feedback ---------- */
+  .fb{margin-top:18px;animation:rise .3s ease both}
+  .verdict{display:flex;align-items:center;gap:9px;font-weight:700;
+    font-size:1.02rem;margin-bottom:12px}
+  .verdict.ok{color:var(--good)}
+  .verdict.no{color:var(--bad)}
+  .verdict .dot{width:10px;height:10px;border-radius:50%;flex:none}
+  .verdict.ok .dot{background:var(--good)}
+  .verdict.no .dot{background:var(--bad)}
+
+  .ans{background:#fbf8f1;border-left:3px solid var(--gold);
+    padding:11px 14px;border-radius:0 9px 9px 0;margin-bottom:13px;font-size:.97rem}
+  .ans b{color:var(--pulse-deep)}
+
+  .block-label{font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--muted);font-weight:700;margin:0 0 5px}
+  .explain{font-size:.95rem;color:#33353b;margin-bottom:15px}
+  .explain b{color:var(--ink)}
+
+  .thm{display:flex;gap:11px;background:linear-gradient(180deg,#fff,#fdfbf6);
+    border:1px solid var(--gold);border-radius:11px;padding:13px 14px}
+  .thm .ico{flex:none;font-size:1.15rem;line-height:1.3}
+  .thm .body{font-size:.93rem}
+  .thm .body strong{display:block;font-size:.66rem;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--gold);margin-bottom:3px;font-weight:800}
+
+  /* ---------- nav ---------- */
+  .nav{display:flex;gap:10px;margin-top:20px}
+  .nav button{flex:1;font-family:inherit;font-size:.95rem;font-weight:600;
+    padding:13px;border-radius:11px;cursor:pointer;transition:transform .08s,opacity .15s}
+  .nav button:active{transform:scale(.99)}
+  .btn-prev{background:#fff;border:1.5px solid var(--line);color:var(--muted)}
+  .btn-prev:hover{border-color:var(--ink);color:var(--ink)}
+  .btn-next{background:var(--pulse);border:1.5px solid var(--pulse);color:#fff}
+  .btn-next:hover{background:var(--pulse-deep);border-color:var(--pulse-deep)}
+  .btn-next:disabled{opacity:.4;cursor:not-allowed}
+  .btn-next:disabled:hover{background:var(--pulse);border-color:var(--pulse)}
+
+  /* ---------- results ---------- */
+  .result{text-align:center;padding:30px 22px 34px}
+  .result .score-ring{margin:0 auto 18px;display:block}
+  .result h2{font-size:1.5rem;margin-bottom:6px}
+  .result .pct{font-family:"SFMono-Regular",ui-monospace,monospace;
+    font-size:2.6rem;font-weight:700;line-height:1}
+  .result .sub{color:var(--muted);font-size:.92rem;margin:8px 0 4px}
+  .result .verdict-msg{font-size:1.05rem;margin:14px 0 22px;font-weight:600}
+  .result-stats{display:flex;gap:10px;justify-content:center;margin-bottom:24px}
+  .stat{flex:1;max-width:130px;background:#fff;border:1px solid var(--line);
+    border-radius:11px;padding:13px 8px}
+  .stat .n{font-family:"SFMono-Regular",ui-monospace,monospace;font-size:1.5rem;font-weight:700;display:block}
+  .stat .l{font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:3px}
+  .stat.hit .n{color:var(--good)}
+  .stat.miss .n{color:var(--bad)}
+  .result .actions{display:flex;flex-direction:column;gap:10px}
+  .result .actions button{font-family:inherit;font-size:.96rem;font-weight:600;
+    padding:13px;border-radius:11px;cursor:pointer}
+  .again{background:var(--pulse);color:#fff;border:none}
+  .again:hover{background:var(--pulse-deep)}
+  .review{background:#fff;color:var(--accent);border:1.5px solid var(--accent)}
+  .review:hover{background:#eef5f7}
+  /* prioridade de estudo */
+  .focus{text-align:left;margin:8px 0 20px;border:1px solid var(--gold);
+    background:linear-gradient(180deg,#fffdf7,#fdf8ec);border-radius:12px;padding:15px 16px}
+  .focus.all-good{border-color:var(--good);background:linear-gradient(180deg,#f6fbf8,#eaf5ee)}
+  .focus-head{display:flex;align-items:center;gap:8px;font-weight:700;font-size:1rem;margin-bottom:5px}
+  .focus-sub{font-size:.86rem;color:var(--muted);margin-bottom:10px;line-height:1.45}
+  .focus-list{list-style:none;counter-reset:fl;display:flex;flex-direction:column;gap:7px}
+  .focus-list li{counter-increment:fl;display:flex;align-items:center;gap:10px;
+    font-size:.92rem;background:#fff;border:1px solid var(--line);border-radius:9px;padding:9px 12px}
+  .focus-list li::before{content:counter(fl);font-family:"SFMono-Regular",ui-monospace,monospace;
+    font-weight:700;color:#fff;background:var(--pulse);width:22px;height:22px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-size:.72rem;flex:none}
+  .focus-list .fl-name{flex:1}
+  .focus-list .fl-meta{font-weight:700;font-size:.82rem}
+
+  /* desempenho por assunto */
+  .diag{text-align:left;margin:4px 0 20px}
+  .diag-row{margin-bottom:13px}
+  .diag-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:5px}
+  .diag-name{font-size:.88rem;font-weight:600}
+  .diag-tag{font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;font-weight:800;
+    border:1px solid;border-radius:20px;padding:2px 8px;flex:none}
+  .diag-bar{height:8px;background:#e7e1d5;border-radius:99px;overflow:hidden}
+  .diag-fill{height:100%;border-radius:99px;transition:width .8s cubic-bezier(.3,.8,.3,1)}
+  .diag-frac{display:block;font-size:.7rem;color:var(--muted);margin-top:4px;text-align:right}
+
+  .missed-list{text-align:left;margin-top:22px;border-top:1px solid var(--line);padding-top:16px;display:none}
+  .missed-list.show{display:block}
+  .missed-list h3{font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--muted);margin-bottom:10px}
+  .missed-item{font-size:.88rem;padding:9px 11px;background:#fff;border:1px solid var(--line);
+    border-radius:9px;margin-bottom:7px;cursor:pointer;display:flex;gap:9px}
+  .missed-item:hover{border-color:var(--pulse)}
+  .missed-item .mn{font-family:"SFMono-Regular",ui-monospace,monospace;color:var(--pulse);font-weight:700;flex:none}
+
+  footer{text-align:center;font-size:.7rem;color:var(--muted);margin-top:26px;line-height:1.5}
+
+  @media (max-width:480px){
+    .wrap{padding:14px 13px 50px}
+    .qtext{font-size:1.06rem}
+    .brand h1{font-size:.92rem}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none!important;transition:none!important}
+    .ecg path{stroke-dashoffset:0}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <svg class="ecg" viewBox="0 0 60 30" aria-hidden="true">
+        <path d="M1 15 H14 L18 15 L21 6 L25 24 L29 15 L33 15 L36 10 L40 20 L44 15 H59"/>
+      </svg>
+      <div>
+        <h1>Simulado de Ergometria</h1>
+        <small>SBC / DERC · 2024</small>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <a href="index.html" class="reset" style="text-decoration:none;display:inline-flex;align-items:center">☰ menu</a>
+      <button class="reset" id="resetBtn" title="Recomeçar do zero">recomeçar</button>
+    </div>
+  </header>
+
+  <div id="quizArea">
+    <div class="pbar-row">
+      <div class="pbar"><div class="pfill" id="pfill"></div></div>
+      <span class="pcount mono" id="pcount">01 / 60</span>
+    </div>
+    <div id="cardSlot"></div>
+    <div class="nav">
+      <button class="btn-prev" id="prevBtn">← Anterior</button>
+      <button class="btn-next" id="nextBtn" disabled>Próxima →</button>
+    </div>
+  </div>
+
+  <div id="resultArea"></div>
+
+  <footer>
+    Baseado na Diretriz Brasileira de Ergometria em População Adulta — 2024 (SBC/DERC).<br>
+    Material de estudo. Conferir sempre a fonte primária.
+  </footer>
+</div>
+
+<script>
+/* ============ DADOS ============ */
+/* type:"mc" = múltipla escolha (correct = índice); type:"open" = dissertativa/auto-avaliação */
+const QUESTIONS = [
+/* BLOCO 1 */
+{block:"Contraindicações & segurança",type:"mc",
+ q:"Homem de 58 anos chega para TE. Em repouso, PA = 184/96 mmHg (confirmada), assintomático. Conduta correta?",
+ options:[
+   "Iniciar o TE com monitorização rigorosa",
+   "Não realizar o exame — PAS de repouso ≥180 mmHg é contraindicação absoluta",
+   "Liberar e repetir a PA no pico do esforço",
+   "Realizar, pois só PAD >110 mmHg contraindica"],
+ correct:1,
+ answer:"Não realizar — PAS persistente em repouso ≥180 mmHg (ou PAD >110) é contraindicação absoluta.",
+ explain:"As <b>contraindicações absolutas (Quadro 1)</b> incluem: embolia/infarto pulmonar agudo; enfermidade aguda/febril/grave; incapacidade física/mental de se exercitar; intoxicação medicamentosa; distúrbios hidroeletrolíticos não corrigidos; BAV de risco; <b>PAS ≥180 ou PAD >110 em repouso</b>; crise/urgência hipertensiva; hipertireoidismo descontrolado; descolamento de retina recente; cardiopatia congênita cianótica descompensada; IAM <5 dias ou complicado; angina instável; arritmias não controladas; EAo grave sintomática; IC descompensada; miocardite/pericardite aguda; dissecção de aorta; aneurisma com indicação de intervenção; doença pulmonar descompensada; DM descompensado.",
+ thm:"PAS de repouso ≥180 OU PAD >110 = absoluta. Não confunda com o limite de interrupção (250 / 120–140), que é bem mais alto."},
+
+{block:"Contraindicações & segurança",type:"mc",
+ q:"Qual destas é uma contraindicação RELATIVA (não absoluta) ao TE?",
+ options:[
+   "Angina instável",
+   "Estenose aórtica grave sintomática",
+   "BAV de 2º grau Mobitz I assintomático",
+   "Dissecção aguda de aorta"],
+ correct:2,
+ answer:"BAV de 2º grau Mobitz I assintomático é relativa.",
+ explain:"Contraindicações <b>relativas</b> = situações de alto risco que exigem cautela (ambiente hospitalar, protocolo adaptado, observação rigorosa, equipe para reprogramar MP/CDI) — não impedem o exame. O <b>BAV de risco</b> (Mobitz II, BAV 2:1, avançado/alto grau, BAVT — exceto congênito) é <b>absoluto</b>; Mobitz I não entra nessa lista.",
+ thm:"Relativa = 'faço com cautela'. Mobitz I (relativa) vs Mobitz II / BAVT adquirido (absoluta) é discriminador clássico."},
+
+{block:"Contraindicações & segurança",type:"mc",
+ q:"Sobre IAM e TE, qual afirmativa está correta conforme a diretriz 2024?",
+ options:[
+   "IAM contraindica TE por 30 dias em qualquer caso",
+   "IAM antes de 5 dias OU com complicações é contraindicação absoluta",
+   "TE é liberado 24h após IAM não complicado",
+   "Só IAM de parede anterior contraindica o TE"],
+ correct:1,
+ answer:"IAM antes de 5 dias ou com complicações é contraindicação absoluta.",
+ explain:"Após esse período e sem complicações, o TE tem papel consolidado na estratificação pós-IAM (ex.: Escore de Duke aplicado ~1 mês pós-IAM no GISSI-2). Nos primeiros dias há remodelamento e instabilidade elétrica/mecânica.",
+ thm:"O número é 5 dias (e 'sem complicações')."},
+
+{block:"Contraindicações & segurança",type:"mc",
+ q:"Preparo correto para cintilografia com DIPIRIDAMOL:",
+ options:[
+   "Suspender metilxantinas 12h e dipiridamol prévio 24h; jejum de 3h",
+   "Nenhuma restrição é necessária",
+   "Suspender cafeína por 2h apenas",
+   "Manter betabloqueador e suspender só nitrato"],
+ correct:0,
+ answer:"Metilxantinas/cafeína ≥12h; dipiridamol prévio ≥24h; jejum de 3h.",
+ explain:"Metilxantinas (café, chá, chocolate, energéticos, alguns analgésicos/antigripais) são <b>inibidores competitivos dos receptores de adenosina</b> e abolem o efeito vasodilatador. Adenosina suspende ≥12h; dipiridamol ≥24h; teofilina ≥12h. Tenha <b>aminofilina (1–2 mg/kg, até 240 mg)</b> como antídoto.",
+ thm:"Cafeína/metilxantina = 12h. Dipiridamol = 24h. Aminofilina é o antídoto."},
+
+{block:"Contraindicações & segurança",type:"mc",
+ q:"Contraindicação ABSOLUTA específica ao estresse com VASODILATADOR (dipiridamol/adenosina):",
+ options:[
+   "Doença do nó sinusal",
+   "Bradicardia sinusal acentuada",
+   "Broncoespasmo em atividade / estado de mal asmático",
+   "Doença carotídea grave bilateral"],
+ correct:2,
+ answer:"Broncoespasmo ativo / mal asmático / hiper-reatividade <3 meses (e BAV 2º-3º sem MP, PAS <90, AVC/AIT <2 meses).",
+ explain:"O risco central do vasodilatador é o <b>brônquio</b>. As demais opções são <b>relativas</b>. Já a <b>dobutamina</b> tem absolutas de natureza adrenérgica: arritmias (FA/TV), EAo grave, CMH obstrutiva, PAS <90, HAS >200, angina instável/IAM recente, aneurisma/dissecção, presença de CDI, distúrbios do potássio.",
+ thm:"Vasodilatador → medo do brônquio. Dobutamina → medo da arritmia/obstrução."},
+
+{block:"Contraindicações & segurança",type:"mc",
+ q:"Mulher de 62 anos com BRE de repouso precisa avaliar isquemia. Melhor estratégia?",
+ options:[
+   "TE em esteira com protocolo de Bruce",
+   "Cintilografia com prova farmacológica vasodilatadora (dipiridamol/adenosina) — I-A",
+   "Cintilografia com dobutamina como 1ª escolha",
+   "Apenas ECG de repouso seriado"],
+ correct:1,
+ answer:"CPM com vasodilatador (dipiridamol ou adenosina) — GR I, NE A.",
+ explain:"Em <b>BRE, WPW e marca-passo</b> o esforço gera alteração de ST não interpretável/falso-positiva (defeito septal artefatual dependente de FC no BRE). O vasodilatador é preferível à dobutamina justamente para evitar esse defeito septal FC-dependente.",
+ thm:"BRE / WPW / MP = vasodilatador na CPM. Decore o trio."},
+
+/* BLOCO 2 */
+{block:"Critérios de interrupção",type:"mc",
+ q:"Durante o TE, paciente NORMOTENSO atinge PAD de 122 mmHg, assintomático. Conduta?",
+ options:[
+   "Manter, pois só interrompe acima de 140",
+   "Interromper — PAD ≥120 mmHg em normotenso é critério de interrupção",
+   "Reduzir carga e prosseguir",
+   "Interromper só se houver sintomas"],
+ correct:1,
+ answer:"Interromper: PAD ≥120 mmHg em normotenso é critério de parada.",
+ explain:"Critérios pressóricos (Tabela 36): <b>PAS >250</b>; <b>PAD ≥120 em normotensos</b>; <b>PAD ≥140 em hipertensos</b>; queda da PAS ≥20 mmHg após elevação inicial; SpO₂ ≤92% (basal normal). Repare: limite de repouso para NÃO iniciar é 180/110; limite intraesforço para PARAR é maior.",
+ thm:"Interrupção: PAS >250 · PAD ≥120 (normo) · PAD ≥140 (hiper). Queda PAS ≥20 = alarme."},
+
+{block:"Critérios de interrupção",type:"mc",
+ q:"Quais magnitudes de desnível de ST configuram critério de INTERRUPÇÃO do esforço?",
+ options:[
+   "Infra ≥1 mm horizontal",
+   "Infra ≥3 mm adicional ao repouso; supra ≥2 mm em derivação sem infarto prévio",
+   "Supra ≥1 mm em qualquer derivação",
+   "Infra ≥2 mm ascendente lento"],
+ correct:1,
+ answer:"Infra ≥0,3 mV (3 mm) adicional; supra ≥0,2 mV (2 mm) em derivação sem infarto prévio.",
+ explain:"Não confunda <b>positividade isquêmica</b> (infra horizontal/descendente ≥1 mm no ponto Y) com <b>interrupção</b> (infra ≥3 mm adicional; supra ≥2 mm sem onda Q/infarto). O supra em derivação sem infarto sugere isquemia transmural grave/espasmo → parada imediata.",
+ thm:"Positividade = 1 mm. Interrupção = 3 mm infra (adicional) ou 2 mm supra (sem infarto)."},
+
+{block:"Critérios de interrupção",type:"mc",
+ q:"Qual achado arrítmico É critério de interrupção (mesmo em episódio único)?",
+ options:[
+   "Extrassístoles ventriculares isoladas frequentes",
+   "TVNS monomórfica de 3 batimentos isolada",
+   "TVNS polimórfica (um episódio)",
+   "Extrassístoles supraventriculares isoladas"],
+ correct:2,
+ answer:"Um episódio de TVNS polimórfica.",
+ explain:"Tabela 36 (interrupção): TVNS (≥3 bat/<30s) <b>ou um episódio de TVNS polimórfica</b>; TV sustentada; FV; FA/flutter esforço-induzidos; TSV sustentada; BAV 2º/3º esforço-induzido; BRE esforço-induzido sintomático; queda persistente da FC com incremento; em CDI, parar 10 bpm abaixo da FC de disparo. TVNS <b>monomórfica</b> isolada → individualizar. EVs/ESVs isoladas não são critério.",
+ thm:"TVNS polimórfica (mesmo 1) = parar. Monomórfica isolada = individualizar."},
+
+{block:"Critérios de interrupção",type:"mc",
+ q:"Na escala de Borg original (6–20), qual valor configura interrupção por exaustão?",
+ options:["Borg ≥13","Borg ≥15","Borg ≥18","Borg ≥20 obrigatório"],
+ correct:2,
+ answer:"Borg ≥18 (escala 6–20).",
+ explain:"Sintomas de interrupção: <b>exaustão (Borg ≥18)</b>; fadiga/claudicação limitante de MMII; ataxia; vertigem persistente/pré-síncope/síncope; angina típica moderada-forte; dispneia precoce desproporcional. Sinais: palidez, sudorese profusa desproporcional, broncoespasmo, B3/B4 ou sopro novos, SpO₂ ≤92%.",
+ thm:"Borg ≥18 na escala 6–20. Não confundir com a Borg modificada (0–10)."},
+
+{block:"Critérios de interrupção",type:"mc",
+ q:"Em portador de CDI, qual o teto de FC de segurança no TE?",
+ options:[
+   "85% da FCmáx prevista",
+   "10 batimentos abaixo da FC de disparo do desfibrilador",
+   "Não há limite específico",
+   "FC de disparo + 10 bpm"],
+ correct:1,
+ answer:"Interromper 10 bpm abaixo da FC programada de disparo do CDI.",
+ explain:"Evita choque inapropriado por entrar na zona de detecção do dispositivo. Exige conhecer a programação do CDI antes do exame (e justifica a presença de equipe apta a reprogramar — conduta das contraindicações relativas).",
+ thm:"CDI → teto = (FC de disparo − 10 bpm). Cheque a programação antes."},
+
+/* BLOCO 3 */
+{block:"Resposta cromotrópica & pressórica",type:"open",
+ q:"Defina o ÍNDICE CRONOTRÓPICO e seu valor de normalidade.",
+ answer:"ICr = (FCmáx atingida − FC repouso) / (FCmáx estimada − FC repouso) × 100. Normal ≥80%.",
+ explain:"Corrige a reserva cronotrópica pela FC basal e idade. <b>ICr <80% = incompetência cronotrópica</b> (pior prognóstico; investigação IIa-B). Reserva medida = FCmáx atingida − FC repouso; reserva prevista = FCmáx estimada − FC repouso.",
+ thm:"ICr <80% = incompetência cronotrópica."},
+
+{block:"Resposta cromotrópica & pressórica",type:"mc",
+ q:"Valores normais de QUEDA da FC no 1º minuto de recuperação ATIVA e PASSIVA (deitado)?",
+ options:[
+   "Ativa >12 bpm; passiva deitado >18 bpm",
+   "Ativa >18 bpm; passiva >22 bpm",
+   "Ativa >22 bpm; passiva >12 bpm",
+   "Ambas >12 bpm"],
+ correct:0,
+ answer:"Ativa: >12 bpm. Passiva deitado: >18 bpm.",
+ explain:"Tabela 30: 1º min <b>ativa</b> (2,4 km/h, 2,5%) >12; 1º min <b>passiva deitado</b> >18; 2º min <b>passiva sentado</b> ≥22. Recuperação lenta = tônus vagal reduzido = maior mortalidade. O MODO (ativo x passivo) muda o corte.",
+ thm:"12 (ativa) / 18 (passiva deitado) / 22 (passiva sentado, 2º min)."},
+
+{block:"Resposta cromotrópica & pressórica",type:"mc",
+ q:"Critério de RESPOSTA HIPERTENSIVA / exagerada da PAS ao esforço:",
+ options:[
+   "PAS ≥180 (H) e ≥160 (M)",
+   "PAS ≥210 (H) e ≥190 (M)",
+   "PAS ≥250 em ambos",
+   "PAS ≥200 independentemente do sexo"],
+ correct:1,
+ answer:"PAS ≥210 mmHg (homens) e ≥190 mmHg (mulheres).",
+ explain:"Em normotensos basais, associa-se a HAS futura, HVE, IAM, FA, AVC e morte CV. PAD anormal = elevação ≥15 mmHg e/ou >90 mmHg partindo de PAD normal. Resposta normal: <210 (H) / <190 (M), PAD ±10 mmHg.",
+ thm:"210 (H) / 190 (M). PAD anormal = +15 mmHg ou >90."},
+
+{block:"Resposta cromotrópica & pressórica",type:"open",
+ q:"Paciente com cardiomiopatia hipertrófica apresenta queda da PAS >20 mmHg no esforço. Significado?",
+ answer:"Hipotensão esforço-induzida — marcador de mau prognóstico; em CMH ocorre em ~1/3 dos casos (baixa reserva de débito + queda inadequada da RVS) e é marcador de risco de morte súbita.",
+ explain:"Diferencie: queda de PAS <b>sem</b> queda de PAD → geralmente isquêmica; queda de PAS <b>com</b> queda de PAD → déficit inotrópico (ex.: valvopatia). Hipotensão de esforço associa-se a disfunção de VE, débito reduzido e DAC grave.",
+ thm:"Hipotensão de esforço = bandeira vermelha. PAS isolada caindo → isquemia; PAS+PAD → déficit inotrópico."},
+
+/* BLOCO 4 */
+{block:"Critérios eletrocardiográficos / ST",type:"mc",
+ q:"Critério de ISTE anormal de morfologia ASCENDENTE LENTA (ponto Y a 80 ms do J):",
+ options:[
+   "≥1 mm em qualquer paciente",
+   "≥1,5 mm em risco moderado/alto; ≥2 mm em baixo risco",
+   "≥0,5 mm sempre",
+   "≥3 mm em todos"],
+ correct:1,
+ answer:"≥1,5 mm (risco moderado/alto) ou ≥2 mm (baixo risco).",
+ explain:"O infra <b>horizontal/descendente ≥1 mm</b> (ponto Y) é o critério clássico. O <b>ascendente lento</b> exige maior magnitude porque tem menor S/E e mais falso-positivo. Ponto Y a <b>60 ms</b> (jovens, FC alta) ou <b>80 ms</b> (adultos/idosos) do ponto J.",
+ thm:"Horizontal/descendente ≥1 mm. Ascendente lento precisa de 1,5–2 mm e é menos confiável."},
+
+{block:"Critérios eletrocardiográficos / ST",type:"mc",
+ q:"Em paciente com BRD, quais derivações NÃO devem ser valorizadas para isquemia?",
+ options:["V4, V5, V6","D2, D3, aVF","V1, V2, V3","D1 e aVL"],
+ correct:2,
+ answer:"V1, V2 e V3 (alterações secundárias de ST do próprio BRD).",
+ explain:"No BRD, o ISTs secundário em V1–V3 não deve ser lido como isquemia; as demais derivações seguem o padrão convencional. Conecta com a lógica dos critérios de Sgarbossa adaptados em distúrbios de condução — em V1–V3 o BRD 'contamina' a repolarização.",
+ thm:"BRD → ignore ST de V1–V3."},
+
+{block:"Critérios eletrocardiográficos / ST",type:"mc",
+ q:"Supradesnível de ST em aVR com infra em V4–V6 sugere:",
+ options:[
+   "Pericardite aguda",
+   "Estenose de tronco de coronária esquerda (TCE) ou DA proximal",
+   "Repolarização precoce benigna",
+   "Sobrecarga de VD"],
+ correct:1,
+ answer:"Estenose de TCE ou DA proximal.",
+ explain:"SSTE em aVR tem <b>sensibilidade ~100%</b> para TCE (especificidade baixa ~33%) e ~94% para DA. Padrão de <b>alto risco</b> → imagem/coronariografia. Supra ≥2 mm em derivação sem infarto é, por si, critério de interrupção.",
+ thm:"Supra em aVR = pense TCE. Alta sensibilidade, baixa especificidade."},
+
+{block:"Critérios eletrocardiográficos / ST",type:"mc",
+ q:"Hump sign ('corcunda' do ST) em assintomático SEM cardiopatia significa:",
+ options:[
+   "DAC multiarterial provável",
+   "Provável falso-positivo, ligado a HAS/RHE, bom prognóstico",
+   "Indicação imediata de cateterismo",
+   "Sinal de pericardite"],
+ correct:1,
+ answer:"Provável falso-positivo (HAS de repouso / resposta hipertensiva exagerada), bom prognóstico.",
+ explain:"Origina-se de ondas de repolarização atrial exageradas (infra com convexidade superior). <b>Exceção:</b> na CMH associou-se a maior risco de morte súbita e disfunção diastólica de VE.",
+ thm:"Hump sign em assintomático = falso-positivo. Na CMH, muda de figura."},
+
+{block:"Critérios eletrocardiográficos / ST",type:"mc",
+ q:"Quando o TE é considerado NÃO DIAGNÓSTICO para DAC?",
+ options:[
+   "Sempre que o paciente tem dor torácica atípica",
+   "Quando não atinge 85% da FCmáx prevista, sem alterações de ST e/ou angina",
+   "Quando atinge a FCmáx mas sem sintomas",
+   "Quando o ECG basal é normal"],
+ correct:1,
+ answer:"Quando não atinge 85% da FCmáx prevista, na ausência de isquemia clínica/elétrica.",
+ explain:"Sem estresse adequado (85% da FCmáx) e sem isquemia, não se exclui DAC — o teste é submáximo/<b>não diagnóstico</b>, não 'negativo'. Por isso registra-se sempre o % da FCmáx (obrigatório também no laudo da CPM, no momento da injeção do radiofármaco).",
+ thm:"'Não atingiu 85% + sem isquemia' = NÃO diagnóstico (≠ negativo)."},
+
+{block:"Critérios eletrocardiográficos / ST",type:"mc",
+ q:"ISTE que surge EXCLUSIVAMENTE na recuperação tardia (após 3º min) sugere:",
+ options:[
+   "DAC multiarterial",
+   "Maior probabilidade de falso-positivo para DAC",
+   "Isquemia transmural",
+   "Espasmo coronariano"],
+ correct:1,
+ answer:"Aumenta a probabilidade de falso-positivo.",
+ explain:"ISTE na recuperação tem, em geral, acurácia igual à do esforço. Mas: normalização precoce (1º min) → mais falso-positivo; persistência >3 min ou recorrência → DAC grave; surgimento <b>exclusivo na recuperação tardia (>3 min)</b> → mais falso-positivo. O timing importa tanto quanto a magnitude.",
+ thm:"Infra tardio (>3 min) e normalização precoce puxam para falso-positivo; infra persistente/recorrente puxa para DAC grave."},
+
+/* BLOCO 5 */
+{block:"Escores & prognóstico",type:"mc",
+ q:"6 min de Bruce, infra de ST de 2 mm, angina limitante. Escore de Duke e categoria?",
+ options:[
+   "ED = +2 → baixo risco",
+   "ED = −4 → intermediário",
+   "ED = −12 → alto risco",
+   "ED = −20 → alto risco"],
+ correct:2,
+ answer:"ED = 6 − (5×2) − (4×2) = −12 → alto risco.",
+ explain:"ED = tempo (min Bruce) − (5 × desnível ST mm) − (4 × angina). Angina: 0 ausente / 1 presente / 2 limitante. Categorias: <b>alto ≤ −11</b> (sobrevida 5a ~67%, mort. anual ≥5%); <b>intermediário −10 a +4</b> (~90%); <b>baixo ≥ +5</b> (~97%). Indicado em sintomáticos, 45–75 anos. Limitado em assintomáticos, pós-CRVM e pós-IAM recente.",
+ thm:"Fórmula: tempo − 5·ST − 4·angina. Cortes: −11 / +5."},
+
+{block:"Escores & prognóstico",type:"mc",
+ q:"Escore de Duke = −3 em paciente assintomático. Categoria e conduta de imagem?",
+ options:[
+   "Baixo risco → CPM I-A",
+   "Intermediário → CPM IIa-B",
+   "Alto risco → CPM III",
+   "Intermediário → não indicar imagem"],
+ correct:1,
+ answer:"Intermediário (−10 a +4); em assintomático, ED intermediário → CPM IIa-B.",
+ explain:"Tabela 14 (CPM em assintomáticos): ED <b>elevado (<−11)</b> → I-A; <b>intermediário (−11 a +5)</b> → IIa-B; <b>baixo (>+5)</b> → III-B. O escore funciona como porteiro do próximo exame.",
+ thm:"ED alto → imagem (I-A). ED baixo → não indicar (III)."},
+
+{block:"Escores & prognóstico",type:"mc",
+ q:"Valores médios de sensibilidade e especificidade do TE para DAC:",
+ options:[
+   "S ~50% / E ~95%",
+   "S ~69% / E ~75%",
+   "S ~90% / E ~60%",
+   "S ~40% / E ~99%"],
+ correct:1,
+ answer:"Sensibilidade ~69% (61–73%) e especificidade ~75% (69–81%).",
+ explain:"O TE rende mais na <b>probabilidade pré-teste intermediária</b> (10–90% na Diamond-Forrester/CASS; 25–75% em outras), onde mais altera a decisão. VPP maior em homens (maior prevalência); mulheres têm mais falso-positivo; idade aumenta o VPP nelas.",
+ thm:"S ~69 / E ~75. Útil no risco intermediário (Bayes na prática)."},
+
+{block:"Escores & prognóstico",type:"open",
+ q:"Qual a relação entre baixa capacidade física (<8 METs) + ISTE no prognóstico de longo prazo?",
+ answer:"ISTE + capacidade <8 METs → RR ~4,8x de morte súbita cardíaca (seguimento de 19 anos).",
+ explain:"Capacidade funcional é dos preditores mais robustos do TE. <b>1 MET = 3,5 mL/kg/min de VO₂</b>. Quanto menor a carga/DP em que surge o ISTE, pior o prognóstico e maior a chance de DAC multiarterial.",
+ thm:"Capacidade funcional é prognóstico puro. ISTE em baixa carga = doença mais grave. 1 MET = 3,5 mL/kg/min."},
+
+/* BLOCO 6 */
+{block:"Protocolos & fisiologia",type:"mc",
+ q:"Idoso sedentário com IC compensada e baixa capacidade física. Protocolo ideal?",
+ options:["Bruce","Bruce modificado (Sheffield)","Naughton","Ellestad"],
+ correct:2,
+ answer:"Naughton (incrementos de ~1 MET por estágio).",
+ explain:"<b>Naughton</b>: ~1 MET/estágio — idosos sedentários, limitação física, baixa capacidade, IC compensada, IAM recente, DAP de MMII. Não usar em ativos (prolonga demais). <b>Bruce</b>: escalonado, incrementos abruptos, para quem tem algum condicionamento. <b>Sheffield</b>: 2 estágios leves antes do Bruce. <b>Rampa</b>: incrementos pequenos/individualizados, melhor p/ capacidade aeróbica e slope ST/FC.",
+ thm:"Baixa capacidade → Naughton. Avaliação aeróbica fina → rampa. Padrão → Bruce."},
+
+{block:"Protocolos & fisiologia",type:"mc",
+ q:"Homem completa 9 min de Bruce. VO₂máx estimado?",
+ options:[
+   "(2,9 × 9) + 8,33 ≈ 34,4 mL/kg/min",
+   "(2,74 × 9) + 8,03 ≈ 32,7 mL/kg/min",
+   "9 × 3,5 = 31,5 mL/kg/min",
+   "(3,5 × 9) + 8 = 39,5 mL/kg/min"],
+ correct:0,
+ answer:"VO₂máx = (2,9 × 9) + 8,33 ≈ 34,4 mL/kg/min (~9,8 METs).",
+ explain:"Fórmulas de Bruce: <b>Homens</b> = (2,9 × tempo) + 8,33; <b>Mulheres</b> = (2,74 × tempo) + 8,03. Converte em METs dividindo por 3,5. Em outros protocolos, converte-se os METs para tempo de Bruce ao calcular o Escore de Duke.",
+ thm:"Fórmula de Bruce + MET = VO₂/3,5. Conecta direto com o Duke."},
+
+{block:"Protocolos & fisiologia",type:"mc",
+ q:"Qual o critério de FCmáx atingida considerada adequada (teste diagnóstico)?",
+ options:["≥70% da FCmáx","≥75% da FCmáx","≥85% da FCmáx estimada","100% obrigatório"],
+ correct:2,
+ answer:"≥85% da FCmáx estimada.",
+ explain:"FC repouso normal 50–99 bpm. Equações: 220 − idade; 208 − (0,7×idade); específicas: mulheres 192 − (0,7×idade), homens 201 − (0,6×idade). Atingir ≥85% é o limiar para considerar o teste diagnóstico (na ausência de isquemia).",
+ thm:"85% da FCmáx prevista é o 'selo' de teste diagnóstico."},
+
+{block:"Protocolos & fisiologia",type:"mc",
+ q:"Recuperação ATIVA em esteira — velocidade, inclinação e duração recomendadas:",
+ options:[
+   "5 km/h, 5%, por 5 min",
+   "2,4 km/h (1,5 MPH), 2,5%, por 1–3 min",
+   "Parar imediatamente o ergômetro",
+   "3,2 km/h, 0%, por 10 min"],
+ correct:1,
+ answer:"2,4 km/h (1,5 MPH) e 2,5% de inclinação, por 1–3 min.",
+ explain:"Após o esforço: recuperação ativa 1–3 min — esteira com desaceleração lenta e gradual + caminhada 2,4 km/h / 2,5%; cicloergômetro com desaceleração gradual da carga. Reduz hipotensão pós-esforço e é o cenário em que se mede a queda da FC do 1º min ativo (>12 bpm).",
+ thm:"Recuperação ativa = 2,4 km/h / 2,5% / 1–3 min."},
+
+/* BLOCO 7 */
+{block:"Cintilografia (CPM)",type:"mc",
+ q:"Dose e administração do DIPIRIDAMOL na CPM, e momento do radiofármaco:",
+ options:[
+   "0,56 mg/kg/min em 4 min; radiofármaco 2–4 min após o término",
+   "140 µg/kg/min em 6 min; radiofármaco no 3º min",
+   "0,56 mg/kg em bolus único; radiofármaco imediato",
+   "1 mg/kg/min em 2 min; radiofármaco no 1º min"],
+ correct:0,
+ answer:"0,56 mg/kg/min (máx 60 mg) em 4 min IV; radiofármaco 2–4 min após (hiperemia máxima).",
+ explain:"Dipiridamol inibe a adenosina-deaminase e bloqueia recaptação de adenosina → ↑ adenosina extracelular → vasodilatação. Meia-vida ~45 min; adversos ~50% (revertidos com aminofilina). <b>Adenosina</b>: 140 µg/kg/min em bomba por 6 min, radiofármaco no 3º min (meia-vida ultracurta 2–10s); adversos ~80%.",
+ thm:"Dipiridamol 0,56 mg/kg/min em 4 min (traçador 2–4 min depois). Adenosina 140 µg/kg/min em 6 min (traçador no 3º min)."},
+
+{block:"Cintilografia (CPM)",type:"open",
+ q:"No estresse físico da CPM, por que injetar o radiofármaco no PICO e manter o esforço por ~1 min depois?",
+ answer:"Para garantir captação miocárdica adequada do traçador na vigência de fluxo coronário máximo.",
+ explain:"Acesso venoso prévio; injeta-se no pico (que pode não coincidir com a FCmáx prevista — IIb-C) e mantém-se a carga +1 min; se inviável, reduzir velocidade/inclinação antes de parar. Aquisição: <b>MIBI-99mTc</b> em 30–60 min; <b>Tálio-201</b> em 10–15 min (evitar redistribuição), tardias em 3–4h.",
+ thm:"Injetar no pico + manter 1 min. MIBI 30–60 min; Tálio 10–15 min. Registre o % da FCmáx na injeção."},
+
+{block:"Cintilografia (CPM)",type:"mc",
+ q:"Quando indicar PROTOCOLO COMBINADO (esforço de baixa carga + vasodilatador) na CPM?",
+ options:[
+   "Em todo paciente jovem hígido",
+   "Quando se quer associar baixa carga física ao vasodilatador (IIa-A), p/ quem não atinge esforço máximo",
+   "Apenas em BRE",
+   "Nunca é recomendado"],
+ correct:1,
+ answer:"GR IIa-A — associar baixa carga física à prova vasodilatadora, em quem não atinge esforço máximo.",
+ explain:"Melhora qualidade da imagem/acurácia (reduz captação esplâncnica, melhora relação coração/fundo). Escolha de estresse (Tabela 12): TE físico I-A (se sem limitação); vasodilatador em BRE/WPW/MP I-A; vasodilatador/dobutamina na contraindicação ao TE I-A; combinado IIa-A.",
+ thm:"Combinado = baixa carga + vasodilatador, IIa-A."},
+
+{block:"Cintilografia (CPM)",type:"mc",
+ q:"Assintomático, ALTO risco (ATP III), para detecção de DAC. Indicação de CPM?",
+ options:["III-A (não indicar)","IIb-C","I-A","IIa-B"],
+ correct:2,
+ answer:"GR I-A.",
+ explain:"Tabela 14: baixo risco ATP III → III-A; intermediário c/ ECG não interpretável → IIa-B; intermediário c/ ECG interpretável → IIb-C; <b>alto risco → I-A</b>; Agatston >400 → IIa-B; ED elevado (<−11) → I-A. Quanto maior o risco/marcadores subclínicos, mais forte a indicação.",
+ thm:"Assintomático: só indica CPM se alto risco (I-A) ou marcadores robustos. Baixo risco = III."},
+
+{block:"Cintilografia (CPM)",type:"mc",
+ q:"Assintomático, revascularização PERCUTÂNEA há 3 anos. Indicação de CPM?",
+ options:["I-B","IIa-B (ICP ≥2 anos)","III-C","IIb-B"],
+ correct:1,
+ answer:"GR IIa-B (ICP ≥2 anos assintomático).",
+ explain:"Tabela 15: sintomáticos a qualquer momento → I-B; CRVM ≥5 anos → IIa-B; CRVM <5 anos → IIb-B; <b>ICP ≥2 anos → IIa-B</b>; ICP <2 anos → III-C. Prazos diferem: cirúrgico 5 anos, percutâneo 2 anos (curvas distintas de reestenose/oclusão de enxerto).",
+ thm:"Pós-revasc assintomático: CRVM corte 5 anos; ICP corte 2 anos. Sintomático = I-B sempre."},
+
+/* BLOCO 8 */
+{block:"Arritmias & situações especiais",type:"mc",
+ q:"Extrassístoles supraventriculares ISOLADAS esforço-induzidas — significado?",
+ options:[
+   "Marcador forte de isquemia",
+   "Geralmente benignas; sem associação com mortalidade cardíaca ou IAM",
+   "Indicam sempre DAC multiarterial",
+   "Contraindicam continuar o exame"],
+ correct:1,
+ answer:"Geralmente benignas (até 10% de saudáveis, 25% de DAC); sem associação com mortalidade/IAM.",
+ explain:"ESVs isoladas: incidência 4–25%, normalmente assintomáticas. <b>Exceção:</b> em idosos, ESVs frequentes (>5/estágio) associaram-se a maior risco de FA/flutter (RR ~15). EVs (ventriculares) isoladas também costumam ser benignas, mas frequentes em DAC = pior prognóstico.",
+ thm:"ESV isolada = benigna. Idoso com ESV frequente = risco de FA. EV frequente em DAC = pior prognóstico."},
+
+{block:"Arritmias & situações especiais",type:"mc",
+ q:"TPSV esforço-induzida (TPSV-EI) — quadro típico e prognóstico?",
+ options:[
+   "Marcador de isquemia e mortalidade CV",
+   "Perto do pico, homens idosos, geralmente benigna, mas prediz maior risco de FA",
+   "Sempre sustentada e sintomática grave",
+   "Indica DAC de TCE"],
+ correct:1,
+ answer:"Surge perto do pico, mais em homens idosos, geralmente assintomática/não sustentada; não marca isquemia/mortalidade, mas prediz FA.",
+ explain:"Incidência 3,4–15% em pacientes com AS paroxísticas. TRN/TRAV raras no TE, início/término súbitos, FC 150–250 bpm, frequentemente revertidas com adenosina. ISTs durante TPSV geralmente NÃO é isquêmico. Salvas ≥3 batimentos → RR 7,6 de FA em ~5,7 anos.",
+ thm:"TPSV-EI não marca isquemia, mas sinaliza risco de FA. ISTs durante TPSV ≠ isquemia."},
+
+{block:"Arritmias & situações especiais",type:"mc",
+ q:"No BAVT CONGÊNITO, qual o papel do TE?",
+ options:[
+   "É contraindicação absoluta, como o BAVT adquirido",
+   "Avaliar resposta ventricular/cronotrópica e auxiliar na indicação de MP (I-B)",
+   "Apenas para liberar esporte sem mais avaliação",
+   "Sem qualquer utilidade"],
+ correct:1,
+ answer:"Avaliar resposta ventricular/cronotrópica ao esforço e auxiliar na indicação de marca-passo (I-B).",
+ explain:"O BAVT <b>congênito</b> é exceção entre os BAV de alto grau — não é absoluta (diferente do adquirido). O TE avalia a reserva cronotrópica do escape juncional; resposta inadequada favorece MP. Outras indicações arrítmicas I-B: síncope/pré-síncope ao esforço, QT longo, TV catecolaminérgica.",
+ thm:"BAVT congênito = pode fazer TE. BAVT adquirido = absoluta. A origem muda tudo."},
+
+{block:"Arritmias & situações especiais",type:"mc",
+ q:"Tempo de suspensão pré-TE diagnóstico: amiodarona, BB cardiosseletivo e digoxina:",
+ options:[
+   "7 / 4 / 30 dias",
+   "30 / 4 / 7 dias",
+   "30 / 7 / 7 dias",
+   "15 / 2 / 5 dias"],
+ correct:1,
+ answer:"Amiodarona 30 dias; BB cardiosseletivo 4 dias (outros BB 7); digoxina 7 dias.",
+ explain:"Sempre a critério do assistente: amiodarona <b>30 dias</b> (meia-vida longuíssima); BB 4 (cardiosseletivo) / 7 (outros), com desmame para evitar rebote; BCC 4; outros antiarrítmicos 3–5; digoxina 7; IECA (captopril/enalapril 1, outros 3); BRA 3; nitratos 1; trimetazidina 2; metildopa/clonidina 1. Digitálicos causam infra de ST falso-positivo. Na prova vasodilatadora, o foco é suspender metilxantinas.",
+ thm:"Amiodarona = 30 dias (campeã). BB = 4–7 com desmame. Digital = 7 (imita isquemia no ST)."},
+
+/* ===================== BLOCO 9 — ECG APLICADO AO TE ===================== */
+{block:"ECG aplicado ao TE",type:"mc",
+ q:"Sobre o comportamento NORMAL das ondas no esforço, qual está correto?",
+ options:[
+   "A onda R aumenta de amplitude e a onda S aumenta de duração",
+   "A onda Q aumenta levemente, a onda R reduz a amplitude e a onda S reduz a duração",
+   "A duração do QRS aumenta com a FC",
+   "O segmento PR sobe acima da linha de base"],
+ correct:1,
+ answer:"No esforço normal: onda Q aumenta discretamente, onda R reduz amplitude, onda S reduz duração e o QRS encurta com a FC.",
+ explain:"Respostas normais ao esforço: <b>onda P</b> apicula (↓duração, ↑amplitude); <b>PRi</b> reduz; <b>onda Q</b> aumenta discretamente; <b>onda R</b> reduz amplitude; <b>onda S</b> reduz duração; <b>QRS</b> encurta ~3–5 ms; <b>onda T</b> cai no início e volta ao basal; <b>onda U</b> some em FC alta. Padrões inversos (R inalterada/aumentada, S sem reduzir, QRS alargando) sugerem anormalidade.",
+ thm:"Esforço normal 'afina' o QRS: R↓, S encurta, Q↑ leve, QRS encurta. Inversão desse padrão = alerta."},
+
+{block:"ECG aplicado ao TE",type:"mc",
+ q:"Pseudonormalização da onda T no esforço (onda T invertida em repouso que vira positiva no pico) sugere:",
+ options:[
+   "Sempre falso-positivo, sem valor",
+   "Defeitos reversíveis e/ou fixos na cintilografia; pode indicar isquemia ou viabilidade",
+   "Bloqueio de ramo esquerdo",
+   "Pericardite aguda"],
+ correct:1,
+ answer:"Associada a defeitos reversíveis/fixos na CPM; em derivações de IAM prévio a baixa carga indica viabilidade residual.",
+ explain:"Pseudonormalização = onda T invertida ≥1 mm no repouso que se torna positiva no pico. Se acompanhada de <b>inversão de onda U</b> em precordiais anteriores → altamente indicativa de estenose crítica de DA. Em derivações de IAM prévio, a baixas cargas, é índice sensível/específico de <b>viabilidade</b>. Em baixa prevalência de DAC, é achado não diagnóstico.",
+ thm:"T que 'normaliza' no esforço não é alívio — pode marcar isquemia, viabilidade ou (com U invertida) DA crítica."},
+
+{block:"ECG aplicado ao TE",type:"mc",
+ q:"Onda U NEGATIVA esforço-induzida (≥0,5 mV) em parede anterior (V2–V5) está associada a:",
+ options:[
+   "Achado benigno de atleta",
+   "Isquemia aguda e DAC grave em DA",
+   "Hipercalemia",
+   "Sobrecarga de VD"],
+ correct:1,
+ answer:"Episódios de isquemia aguda e DAC grave em DA.",
+ explain:"A inversão de onda U esforço-induzida (≥0,5 mV) em V2–V5 é marcador de isquemia/DA grave. Onda U <b>positiva</b> com ↑amplitude (≥0,5 mV) em precordiais → isquemia ínfero-posterior (CX/CD). Onda U negativa no repouso associa-se a regurgitação mitral/aórtica, HAS e DAC; amplitude aumentada → hipopotassemia, digitálicos, amiodarona, quinidina.",
+ thm:"Onda U negativa no esforço (V2–V5) = DA grave. A onda U é pequena mas fala alto sobre coronária."},
+
+{block:"ECG aplicado ao TE",type:"mc",
+ q:"Em qual derivação a presença de onda Q é SEMPRE considerada patológica?",
+ options:["D3","aVR","V1","aVL"],
+ correct:2,
+ answer:"Onda Q em V1 é sempre patológica.",
+ explain:"No ECG de repouso, a onda Q é anormal quando dura ≥40 ms (≥0,04 s) ou tem amplitude >1/3 da R adjacente em ≥2 derivações contíguas. Em <b>D3</b> a Q pode exceder 40 ms fisiologicamente (raramente 50 ms). <b>Q em V1 é sempre patológica.</b> No esforço, a Q normalmente aumenta discretamente; o desaparecimento da Q septal pode acompanhar respostas anormais.",
+ thm:"Q em V1 = sempre patológica. Q em D3 isolada pode ser normal. Critério geral: ≥40 ms ou >1/3 da R."},
+
+{block:"ECG aplicado ao TE",type:"mc",
+ q:"A redução da amplitude da onda S no esforço, mesmo sem alteração de ST, indica:",
+ options:[
+   "Resposta normal sem significado",
+   "Pode aumentar a sensibilidade do TE por refletir isquemia subendocárdica em DAC",
+   "Bloqueio de ramo direito",
+   "Artefato de filtro"],
+ correct:1,
+ answer:"Diminuição da onda S associa-se a isquemia subendocárdica em DAC, aumentando a sensibilidade do TE.",
+ explain:"Análise do QRS agrega ao ST: a <b>diminuição da onda S</b> em DAC reflete isquemia subendocárdica mesmo sem ISTs. Duração de S <b>inalterada</b> sugere obstrução de CD/CX; aumento importante da duração (~12 ms) aponta DA crítica, BDAS ou BRD. O ΔDQRS e a fragmentação de QRS em alta frequência (AFQRS) também são mais específicos/sensíveis que o ST isolado.",
+ thm:"O QRS conta história além do ST: S que diminui = pista de isquemia subendocárdica. Útil quando o ST é ambíguo."},
+
+{block:"ECG aplicado ao TE",type:"mc",
+ q:"Sobre a fragmentação de QRS em alta frequência (AFQRS) no TE:",
+ options:[
+   "É menos sensível que o segmento ST",
+   "Anormal se redução ≥1 μV ou ≥50% da RQMN em ≥3 derivações no esforço máximo; mais sensível/específica que o ST",
+   "Só serve para repouso",
+   "Não tem valor prognóstico"],
+ correct:1,
+ answer:"Anormal: redução absoluta ≥1 μV ou relativa ≥50% (RQMN) em ≥3 derivações no esforço máximo; supera o ST em S/E/VPP.",
+ explain:"A AFQRS (filtragem 150–250 Hz) analisa componentes de alta frequência do QRS. Combinada ao ISTs, alcança VPN de ~99% para isquemia grave e identifica ~92% dos isquêmicos. É preditor independente de eventos cardíacos. No submáximo, o corte relativo ajusta-se entre 40–50% conforme a FC atingida.",
+ thm:"AFQRS = ECG 'em alta definição'. Mais sensível/específica que o ST e some prognóstico quando somada a ele."},
+
+{block:"ECG aplicado ao TE",type:"mc",
+ q:"Infradesnivelamento do segmento PR >0,5 mm no esforço pode refletir:",
+ options:[
+   "Sempre artefato",
+   "Sobrecarga de pressão atrial esquerda durante isquemia / resposta atrial anormal",
+   "Bloqueio AV total",
+   "Repolarização precoce benigna"],
+ correct:1,
+ answer:"Resposta atrial anormal — associada a sobrecarga de pressão atrial e isquemia.",
+ explain:"Comportamento normal da onda P/PR: amplitude da P aumenta linearmente com a FC (inferiores), PRi reduz, segmento PR mantém-se na linha de base. Respostas <b>anormais</b>: P mantém/aumenta duração (sobrecarga atrial E na isquemia), mudança de morfologia, e <b>infra de PR >0,5 mm</b>. A dispersão da duração de P combinada elevou a sensibilidade do TE a 79% e o VPP a 91%.",
+ thm:"O átrio também responde: P que alarga e PR que infra (>0,5 mm) no esforço são sinais sutis de isquemia/sobrecarga."},
+
+{block:"ECG aplicado ao TE",type:"mc",
+ q:"Repolarização precoce (RP) e seu comportamento no TE — qual afirmativa é correta?",
+ options:[
+   "RP que persiste/aumenta ao esforço é sempre benigna",
+   "Em jovens, a RP costuma reduzir/desaparecer com o esforço; persistência foi observada em sintomáticos (MS abortada, arritmia, síncope)",
+   "RP contraindica o TE",
+   "RP só existe em precordiais direitas"],
+ correct:1,
+ answer:"Em jovens a RP geralmente reduz/desaparece no esforço; a persistência ao esforço foi vista em pacientes sintomáticos de risco.",
+ explain:"A RP é comum em jovens e atletas (especialmente padrão com ST ascendente rápido anterolateral). O <b>Jp</b> (pico do entalhe do J) deve ter ≥0,1 mV em ≥2 derivações contíguas, exceto V1–V3. Padrão benigno some em cargas moderadas; <b>persistência ao esforço</b> foi associada a indivíduos sintomáticos (morte súbita abortada, arritmia ventricular, síncope inexplicada).",
+ thm:"RP que some no esforço = tranquilizador (jovem/atleta). RP que persiste em quem teve evento = sinal de alerta."},
+
+{block:"ECG aplicado ao TE",type:"mc",
+ q:"Sobre a inclinação (slope) ST/FC no TE:",
+ options:[
+   "É menos acurada que o ST isolado",
+   "Relaciona a magnitude do ISTs ao incremento da FC, melhorando a acurácia diagnóstica",
+   "Só se aplica a portadores de marca-passo",
+   "Mede a duração do QRS"],
+ correct:1,
+ answer:"Relaciona o desnível de ST ao aumento da FC (μV/bpm), refinando a interpretação isquêmica.",
+ explain:"O índice e o loop ST/FC ajustam o ISTs pela demanda (FC), reduzindo falsos-positivos/negativos do ST 'cru'. É mais bem determinado em protocolos com incrementos graduais e contínuos (rampa). Faz parte das ferramentas de análise quantitativa do ST junto ao ponto J/ponto Y.",
+ thm:"ST/FC = ler o infra 'corrigido' pela FC. Protocolo de rampa é o terreno ideal pra calcular."},
+
+{block:"ECG aplicado ao TE",type:"mc",
+ q:"Onda T positiva, simétrica e apiculada (>2,5 mV) em V2–V4 em paciente com dor torácica sugere:",
+ options:[
+   "Variante do normal",
+   "Isquemia grave",
+   "Hipocalcemia",
+   "Bloqueio de ramo"],
+ correct:1,
+ answer:"Isquemia grave (T hiperaguda).",
+ explain:"O comportamento NORMAL da T: cai no início do esforço e retorna ao basal, com porção inicial lenta e final rápida. Anormais: T <b>aumentada/apiculada simétrica</b> (>2,5 mV) em V2–V4 com dor = isquemia grave; pseudonormalização; T bifásica em V1–V3 (associada a angina instável); T negativa simétrica pontiaguda em derivações de QRS positivo (exceto D3, aVR, V1).",
+ thm:"T hiperaguda (alta, simétrica, apiculada) com dor = isquemia grave. Simetria é a palavra-chave da T isquêmica."},
+
+/* ===================== BLOCO 10 — TESTE CARDIOPULMONAR (TCP) ===================== */
+{block:"Teste cardiopulmonar (TCP)",type:"mc",
+ q:"Qual a diferença entre VO₂máximo e VO₂pico no TCPE?",
+ options:[
+   "São sinônimos",
+   "VO₂máx exige platô da curva de VO₂ apesar do aumento de carga; VO₂pico é o maior valor sem platô",
+   "VO₂pico é sempre maior que o VO₂máx",
+   "VO₂máx só existe em atletas"],
+ correct:1,
+ answer:"VO₂máx = há platô do VO₂ (<50 mL/min ou 2,1 mL/kg/min de incremento); VO₂pico = maior valor ao fim de esforço exaustivo SEM platô.",
+ explain:"O <b>VO₂máx</b> (com platô) é o padrão-ouro da aptidão cardiorrespiratória. Na prática, a maioria não atinge platô, reportando-se o <b>VO₂pico</b>. 1 MET = 3,5 mL/kg/min. O VO₂ pode ser expresso em L/min (absoluto) ou, preferencialmente, mL/kg/min (relativo ao peso).",
+ thm:"Platô = VO₂máx (padrão-ouro). Sem platô = VO₂pico (o que mais se usa)."},
+
+{block:"Teste cardiopulmonar (TCP)",type:"mc",
+ q:"Qual valor do quociente respiratório (R/QR) indica esforço máximo/quase exaustão?",
+ options:["R ≥0,72","R ≥0,82","R ≥1,00","R ≥1,10"],
+ correct:3,
+ answer:"R ≥1,10 é considerado sinal de quase exaustão/exaustão (esforço máximo).",
+ explain:"O QR = VCO₂/VO₂. Cargas iniciais ~0,72 (gordura); LV1 ~0,82 (~40% lipídios/60% CHO); LV2 ~1,00 (carboidrato quase exclusivo); próximo ao pico ultrapassa 1,00. <b>R ≥1,10</b> valida esforço máximo — critério metabólico objetivo, útil quando a FC-alvo não foi atingida.",
+ thm:"R ≥1,10 = carimbo de esforço máximo no TCPE. Sequência: 0,72 → 0,82 (LV1) → 1,00 (LV2) → ≥1,10 (exaustão)."},
+
+{block:"Teste cardiopulmonar (TCP)",type:"mc",
+ q:"Na insuficiência cardíaca, qual valor da relação VE/VCO₂ indica pior prognóstico?",
+ options:["≥20","≥28","≥34","≥45"],
+ correct:2,
+ answer:"VE/VCO₂ ≥34 indica pior prognóstico na IC.",
+ explain:"A curva <b>VE/VCO₂</b> (eficiência ventilatória) é preditor de mortalidade/hospitalização na IC e DPOC — quanto maior, pior. A inflexão no LV2 marca o ponto de compensação respiratória. O VE/VCO₂ é uma das variáveis comumente anormais na disfunção de VE, junto a VO₂pico, LV1, ΔVO₂/ΔWR e curva VE/VCO₂ inclinada (incompatibilidade V/Q).",
+ thm:"VE/VCO₂ ≥34 = bandeira prognóstica na IC. Eficiência ventilatória ruim = pior desfecho."},
+
+{block:"Teste cardiopulmonar (TCP)",type:"mc",
+ q:"O pulso de oxigênio (PuO₂ = VO₂/FC) em PLATÔ ou QUEDA no esforço sugere:",
+ options:[
+   "Boa função ventricular",
+   "Disfunção de VE / isquemia miocárdica (proxy do volume sistólico)",
+   "Hiperventilação",
+   "Erro de calibração"],
+ correct:1,
+ answer:"Disfunção de VE / isquemia — o PuO₂ tem relação direta com o volume sistólico.",
+ explain:"PuO₂ = VO₂/FC, reflete o O₂ transportado por sístole, proxy do volume sistólico. Na isquemia, a disfunção de VE manifesta-se por <b>platô ou queda do PuO₂</b>. No estudo ORBITA, dentre os parâmetros do TCPE, apenas o platô do PuO₂ detectou objetivamente a gravidade da isquemia vista no eco-dobutamina.",
+ thm:"PuO₂ em platô/queda = volume sistólico não acompanha = disfunção de VE/isquemia. Foi o destaque do ORBITA no TCPE."},
+
+{block:"Teste cardiopulmonar (TCP)",type:"mc",
+ q:"Qual o valor NORMAL da relação ΔVO₂/ΔWR e o que seu achatamento indica?",
+ options:[
+   "~10 mL/min/W; achatamento indica isquemia esforço-induzida com disfunção de VE",
+   "~34 mL/min/W; achatamento indica hiperventilação",
+   "~1,10; achatamento indica exaustão",
+   "~3,5 mL/min/W; achatamento é normal"],
+ correct:0,
+ answer:"Normal ~10 mL/min/W (linear); achatamento a partir do limiar isquêmico indica isquemia com disfunção de VE.",
+ explain:"A ΔVO₂/ΔWR quantifica fisiologicamente a taxa de trabalho em que a isquemia surge, sendo melhor avaliada em <b>cicloergômetro com rampa</b> (expressa em mL/min/W). Em saudáveis é linear (~10) do início ao pico; na isquemia esforço-induzida, a curva achata a partir do limiar isquêmico.",
+ thm:"ΔVO₂/ΔWR normal ~10 mL/min/W e linear. Achatou = isquemia/disfunção de VE. Rampa em bike é o ideal."},
+
+{block:"Teste cardiopulmonar (TCP)",type:"mc",
+ q:"A ventilação oscilatória ao esforço (EOV) é marcador de:",
+ options:[
+   "Boa aptidão em atletas",
+   "Gravidade e pior prognóstico na IC, sobretudo se precoce e com ciclo >1 min",
+   "Doença pulmonar restritiva apenas",
+   "Esforço submáximo insuficiente"],
+ correct:1,
+ answer:"Gravidade e pior prognóstico na IC — pior quando precoce e com ciclo >1 minuto.",
+ explain:"A EOV é uma flutuação cíclica da VE (oscilação >15% do valor médio de repouso) com duração >60% do tempo de esforço, reconhecível já no TCPE submáximo. Relaciona-se a débito cardíaco reduzido / resposta quimiorreflexa alterada. É marcador robusto de gravidade na ICFEr.",
+ thm:"EOV = respiração 'em ondas' = IC grave. Precoce e com ciclo >1 min = pior ainda."},
+
+{block:"Teste cardiopulmonar (TCP)",type:"mc",
+ q:"Qual a faixa normal da reserva ventilatória (RV) ao esforço?",
+ options:["0–10%","20–40%","50–70%",">80%"],
+ correct:1,
+ answer:"RV normal = 20% a 40%.",
+ explain:"RV = (VVM − VEmáx)/VVM × 100, normal entre 20–40% (≈3.000 mL em homens, 2.100 mL em mulheres). VVM ≈ VEF1 × 35–40. Em condições normais a VEmáx fica <70% da VVM. RV <b>reduzida</b> sugere limitação ventilatória (causa pulmonar); RV <b>preservada</b> com baixo VO₂ aponta limitação cardiovascular/circulatória — útil no diagnóstico diferencial de dispneia.",
+ thm:"RV 20–40%. RV baixa = limitação pulmonar; RV preservada + VO₂ baixo = limitação cardíaca. Diferencia a dispneia."},
+
+{block:"Teste cardiopulmonar (TCP)",type:"open",
+ q:"O que é o LV1 (1º limiar ventilatório) e como é identificado indiretamente no TCPE?",
+ answer:"LV1 = limiar anaeróbio/limiar de lactato — início do acúmulo sustentado de lactato, ainda com acidose compensada. Indiretamente: primeiro ponto de dissociação das curvas VE/VO₂ (e VCO₂/VO₂), com inflexão positiva do VE/VO₂ sem subida do VE/VCO₂.",
+ explain:"O LV1 marca a transição para participação crescente do metabolismo anaeróbio lático, com acidose ainda tamponada pela alcalose respiratória até o LV2. A razão <b>VE/VO₂ diminui até o LV1</b> e depois sobe; a <b>VE/VCO₂ diminui até o LV2</b>. A identificação dos limiares tem valor prognóstico (IC/DAC), ajusta terapia e orienta prescrição de exercício na reabilitação.",
+ thm:"LV1 = limiar anaeróbio. Sinal: VE/VO₂ começa a subir SEM o VE/VCO₂ subir junto. Base da prescrição de treino."},
+
+{block:"Teste cardiopulmonar (TCP)",type:"mc",
+ q:"Sobre o OUES (inclinação da eficiência de captação de O₂):",
+ options:[
+   "Só é válido em esforço máximo",
+   "É reprodutível, derivável de valores submáximos, e baixo na IC grave (pior prognóstico)",
+   "Mede a reserva ventilatória",
+   "Aumenta na IC grave"],
+ correct:1,
+ answer:"Reprodutível, obtido mesmo de valores submáximos; OUES baixo = menor eficiência (IC grave, pior prognóstico).",
+ explain:"OUES = regressão logarítmica VO₂ vs. VE (VO₂ = a·log₁₀VE + b); corresponde ao aumento de VO₂ por aumento de 10× na VE. Vantagem: <b>não exige esforço máximo</b>. Quanto mais inclinada a reta, maior o OUES e a eficiência. Na ICFEr o OUES é baixo e tem valor prognóstico, inclusive isolado.",
+ thm:"OUES = eficiência de O₂ sem precisar de esforço máximo. Baixo = IC grave. Ótimo quando o paciente não vai ao limite."},
+
+{block:"Teste cardiopulmonar (TCP)",type:"mc",
+ q:"Por que a esteira tende a gerar VO₂máx/pico maior que o cicloergômetro?",
+ options:[
+   "Pela menor familiaridade com a esteira",
+   "Por usar maior massa muscular e trabalho contra a gravidade (≈5–15% maior)",
+   "Porque mede a carga em Watts com precisão",
+   "Porque reduz artefatos de ECG"],
+ correct:1,
+ answer:"A esteira usa maior massa muscular e trabalho contra a gravidade → VO₂ ~5–15% maior.",
+ explain:"Vantagens da esteira: atividade mais familiar, maior massa muscular, maior estresse cardiorrespiratório → <b>VO₂máx/pico ≈5–15% maior</b>. Limitação: imprecisão na carga em Watts. A <b>bicicleta</b> (eletromagnética, cadência 40–70 rpm) permite medir carga em W, tem menos artefatos de ECG e facilita PA — sendo preferível para calcular ΔVO₂/ΔWR.",
+ thm:"Esteira → VO₂ maior (massa muscular + gravidade). Bike → carga em Watts precisa, menos artefato, ideal pra ΔVO₂/ΔWR."},
+
+{block:"Teste cardiopulmonar (TCP)",type:"mc",
+ q:"Quais variáveis do TCPE são comumente ANORMAIS na disfunção de VE?",
+ options:[
+   "Apenas a FC máxima",
+   "VO₂pico, LV1, ΔVO₂/ΔWR e inclinação aumentada da curva VE/VCO₂",
+   "Somente a reserva ventilatória",
+   "Apenas o quociente respiratório"],
+ correct:1,
+ answer:"VO₂pico, limiar anaeróbio (LV1), ΔVO₂/ΔWR e VE/VCO₂ inclinada (marcador de incompatibilidade V/Q).",
+ explain:"Na disfunção de VE, o conjunto de variáveis se deteriora: <b>VO₂pico</b> reduzido, <b>LV1</b> precoce/baixo, <b>ΔVO₂/ΔWR</b> achatada (isquemia), <b>VE/VCO₂</b> elevada/inclinada (ineficiência ventilatória, ≥34 = pior prognóstico na IC), além de PuO₂ em platô/queda, EOV presente e OUES baixo. A leitura é integrada, não isolada.",
+ thm:"Na disfunção de VE o TCPE 'piora em conjunto': VO₂pico↓, LV1↓, ΔVO₂/ΔWR achata, VE/VCO₂↑. Leitura integrada."},
+
+{block:"ECG aplicado ao TE",type:"mc",
+ q:"O aumento importante da duração do QRS (ΔDQRS) no esforço é mais ESPECÍFICO que o ST para qual situação?",
+ options:[
+   "Repolarização precoce",
+   "Detecção de isquemia; ΔDQRS ≥15 ms em cardiopatia isquêmica previu arritmias ventriculares graves",
+   "Bloqueio sinoatrial",
+   "Hipertrofia atrial"],
+ correct:1,
+ answer:"Para isquemia: o ΔDQRS é mais específico que as alterações ST-T; ≥15 ms previu TV/FV (VPP 73%).",
+ explain:"Normalmente o QRS <b>encurta</b> ~3–5 ms com a FC. O cálculo do ΔDQRS (variação da duração) alterado é mais específico que o ST-T para isquemia. Em mulheres, melhorou S (91%), E (89%) e VPP (88%). Em cardiopatia isquêmica, <b>ΔDQRS ≥15 ms</b> previu arritmias ventriculares graves (VPP 73%), normalizando após revascularização com supressão das arritmias.",
+ thm:"QRS deve encurtar no esforço; se ALARGA (ΔDQRS ≥15 ms) = isquemia + risco arrítmico. Mais específico que o ST."}
+];
+
+/* ============ ESTADO ============ */
+const TOTAL = QUESTIONS.length;
+const STORE = "ergo_quiz_2024_v2";  // v2: 60 questões + shuffle
+
+function shuffle(arr){
+  const a=arr.slice();
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+// cria uma nova "rodada" embaralhada: ordem das questões + ordem das opções de cada questão
+function freshState(){
+  const order = shuffle([...Array(TOTAL).keys()]);   // ordem em que as questões aparecem
+  const optOrder = QUESTIONS.map(Q => Q.type==="mc" ? shuffle([...Array(Q.options.length).keys()]) : null);
+  return { idx:0, order, optOrder, answers:new Array(TOTAL).fill(null) };
+}
+let state = freshState();
+
+function load(){
+  try{
+    const s=JSON.parse(localStorage.getItem(STORE));
+    if(s && s.answers && s.answers.length===TOTAL && s.order && s.optOrder){ state=s; }
+  }catch(e){}
+}
+function save(){ try{ localStorage.setItem(STORE, JSON.stringify(state)); }catch(e){} }
+load();
+
+// helpers de indireção: posição na sequência -> questão real
+const qAt = pos => QUESTIONS[state.order[pos]];
+const optOrderAt = pos => state.optOrder[state.order[pos]];
+
+/* ============ ELEMENTOS ============ */
+const slot=document.getElementById("cardSlot");
+const pfill=document.getElementById("pfill");
+const pcount=document.getElementById("pcount");
+const prevBtn=document.getElementById("prevBtn");
+const nextBtn=document.getElementById("nextBtn");
+const quizArea=document.getElementById("quizArea");
+const resultArea=document.getElementById("resultArea");
+const pad=n=>String(n).padStart(2,"0");
+
+/* ============ RENDER QUESTÃO ============ */
+function render(){
+  resultArea.innerHTML=""; quizArea.style.display="";
+  const pos=state.idx, Q=qAt(pos), ans=state.answers[pos];
+  const answered = ans!==null;
+
+  pfill.style.width = ((pos)/TOTAL*100)+"%";
+  pcount.textContent = pad(pos+1)+" / "+pad(TOTAL);
+
+  let html = `<div class="card">
+    <div class="qtop">
+      <span class="qnum">Q${pad(pos+1)}</span>
+      <span class="qtag">${Q.block}</span>
+    </div>
+    <p class="qtext">${Q.q}</p>`;
+
+  if(Q.type==="mc"){
+    const ord = optOrderAt(pos);   // ordem embaralhada das opções (índices reais)
+    html += `<div class="opts">`;
+    ord.forEach((realIdx,displayPos)=>{
+      const letter=String.fromCharCode(65+displayPos);
+      let cls="opt", mark="";
+      if(answered){
+        if(realIdx===Q.correct){cls+=" correct"; mark="✓";}
+        else if(realIdx===ans.given){cls+=" wrong"; mark="✕";}
+      }
+      html+=`<button class="${cls}" data-oi="${realIdx}" ${answered?"disabled":""}>
+        <span class="key">${letter}</span><span>${Q.options[realIdx]}</span>${mark?`<span class="mark">${mark}</span>`:""}</button>`;
+    });
+    html+=`</div>`;
+  } else {
+    // open / self-assess
+    if(!answered){
+      html += `<button class="reveal-btn" id="revealBtn">Mostrar resposta</button>`;
+    }
+  }
+
+  // feedback
+  if(answered || (Q.type==="open" && ans!==null)){
+    html += feedbackHTML(Q, ans);
+  }
+
+  html += `</div>`;
+  slot.innerHTML=html;
+
+  // bind
+  if(Q.type==="mc" && !answered){
+    slot.querySelectorAll(".opt").forEach(b=>{
+      b.addEventListener("click",()=>choose(parseInt(b.dataset.oi)));
+    });
+  }
+  if(Q.type==="open" && !answered){
+    const rb=document.getElementById("revealBtn");
+    if(rb) rb.addEventListener("click",revealOpen);
+  }
+
+  // nav state
+  prevBtn.disabled = pos===0;
+  prevBtn.style.visibility = pos===0 ? "hidden":"visible";
+  const isLast = pos===TOTAL-1;
+  nextBtn.textContent = isLast ? "Ver resultado →" : "Próxima →";
+  nextBtn.disabled = !answered;
+  save();
+}
+
+function feedbackHTML(Q, ans){
+  let v="";
+  if(Q.type==="mc"){
+    const ok=ans.correct;
+    v=`<div class="verdict ${ok?'ok':'no'}"><span class="dot"></span>${ok?'Correto':'Incorreto'}</div>`;
+  } else {
+    if(ans.correct===true) v=`<div class="verdict ok"><span class="dot"></span>Você marcou: acertei</div>`;
+    else if(ans.correct===false) v=`<div class="verdict no"><span class="dot"></span>Você marcou: errei</div>`;
+    else v=`<div class="verdict ok"><span class="dot"></span>Resposta revelada</div>`;
+  }
+  return `<div class="fb">
+    ${v}
+    <div class="ans"><b>Resposta.</b> ${Q.answer}</div>
+    <p class="block-label">Comentário</p>
+    <p class="explain">${Q.explain}</p>
+    <div class="thm"><span class="ico">🎯</span><div class="body"><strong>Take home</strong>${Q.thm}</div></div>
+    ${Q.type==="open" && ans.correct===null ? selfAssessHTML() : ""}
+  </div>`;
+}
+
+function selfAssessHTML(){
+  return `<div class="selfrow">
+    <button class="self-hit" id="selfHit">Acertei ✓</button>
+    <button class="self-miss" id="selfMiss">Errei ✕</button>
+  </div>`;
+}
+
+function choose(realIdx){
+  const pos=state.idx, Q=qAt(pos);
+  state.answers[pos]={given:realIdx, correct: realIdx===Q.correct};
+  save(); render();
+}
+
+function revealOpen(){
+  const pos=state.idx;
+  state.answers[pos]={given:null, correct:null}; // revelada, aguardando auto-avaliação
+  save(); render();
+  // bind self-assess buttons
+  const h=document.getElementById("selfHit"), m=document.getElementById("selfMiss");
+  if(h) h.addEventListener("click",()=>{state.answers[pos].correct=true; save(); render();});
+  if(m) m.addEventListener("click",()=>{state.answers[pos].correct=false; save(); render();});
+}
+
+/* ============ NAV ============ */
+nextBtn.addEventListener("click",()=>{
+  if(state.idx===TOTAL-1){ showResult(); }
+  else { state.idx++; render(); window.scrollTo({top:0,behavior:'smooth'}); }
+});
+prevBtn.addEventListener("click",()=>{
+  if(state.idx>0){ state.idx--; render(); window.scrollTo({top:0,behavior:'smooth'}); }
+});
+
+/* ============ RESULTADO ============ */
+function showResult(){
+  quizArea.style.display="none";
+  pfill.style.width="100%";
+  const scored = state.answers.filter(a=>a&&a.correct!==null);
+  const hits = state.answers.filter(a=>a&&a.correct===true).length;
+  const total = scored.length || TOTAL;
+  const pct = Math.round(hits/ (scored.length||1) *100);
+  const missed = [];
+  state.answers.forEach((a,i)=>{ if(a&&a.correct===false) missed.push(i); });
+
+  let msg, color;
+  if(pct>=85){msg="Pronta pra encarar o chefe. Mandou bem demais."; color="var(--good)";}
+  else if(pct>=70){msg="Bom nível — revise os erros e fecha o ciclo."; color="var(--gold)";}
+  else if(pct>=50){msg="Caminho certo. Foque nos blocos que mais escaparam."; color="var(--gold)";}
+  else {msg="Hora de revisar a diretriz com calma e refazer."; color="var(--pulse)";}
+
+  // ring
+  const r=52, c=2*Math.PI*r, off=c*(1-pct/100);
+  const ring=`<svg class="score-ring" width="140" height="140" viewBox="0 0 140 140">
+    <circle cx="70" cy="70" r="${r}" fill="none" stroke="#e7e1d5" stroke-width="12"/>
+    <circle cx="70" cy="70" r="${r}" fill="none" stroke="${color}" stroke-width="12"
+      stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${c}"
+      transform="rotate(-90 70 70)" style="transition:stroke-dashoffset 1.1s cubic-bezier(.3,.8,.3,1)" id="ringFill"/>
+    <text x="70" y="78" text-anchor="middle" font-size="30" font-weight="700"
+      font-family="ui-monospace,monospace" fill="${color}">${pct}%</text>
+  </svg>`;
+
+  // ----- diagnóstico por bloco/assunto -----
+  const blocks={};
+  state.answers.forEach((a,pos)=>{
+    if(!a || a.correct===null) return;          // só pontuadas
+    const b=qAt(pos).block;
+    if(!blocks[b]) blocks[b]={hit:0,tot:0};
+    blocks[b].tot++; if(a.correct===true) blocks[b].hit++;
+  });
+  const blockRows=Object.keys(blocks).map(b=>{
+    const o=blocks[b]; const p=Math.round(o.hit/o.tot*100);
+    let lvl,lc;
+    if(p>=80){lvl="Dominado";lc="var(--good)";}
+    else if(p>=50){lvl="Revisar";lc="var(--gold)";}
+    else {lvl="Estudar";lc="var(--pulse)";}
+    return {b,p,lvl,lc,hit:o.hit,tot:o.tot};
+  }).sort((a,z)=>a.p-z.p); // pior primeiro
+
+  const toStudy=blockRows.filter(r=>r.p<80);
+
+  let diagHTML="";
+  if(blockRows.length){
+    diagHTML=`<div class="diag">
+      <p class="block-label" style="margin-bottom:12px">Desempenho por assunto</p>
+      ${blockRows.map(r=>`
+        <div class="diag-row">
+          <div class="diag-head">
+            <span class="diag-name">${r.b}</span>
+            <span class="diag-tag" style="color:${r.lc};border-color:${r.lc}">${r.lvl}</span>
+          </div>
+          <div class="diag-bar"><div class="diag-fill" style="width:0" data-w="${r.p}" data-c="${r.lc}"></div></div>
+          <span class="diag-frac mono">${r.hit}/${r.tot} · ${r.p}%</span>
+        </div>`).join("")}
+    </div>`;
+  }
+
+  let focusHTML="";
+  if(toStudy.length){
+    focusHTML=`<div class="focus">
+      <div class="focus-head"><span>📌</span> Prioridade de estudo</div>
+      <p class="focus-sub">Com base nos seus erros, foque nestes assuntos da diretriz, do mais urgente ao menos:</p>
+      <ol class="focus-list">
+        ${toStudy.map(r=>`<li><span class="fl-name">${r.b}</span> <span class="fl-meta mono" style="color:${r.lc}">${r.p}%</span></li>`).join("")}
+      </ol>
+    </div>`;
+  } else if(blockRows.length){
+    focusHTML=`<div class="focus all-good">
+      <div class="focus-head"><span>✅</span> Sem pontos fracos evidentes</div>
+      <p class="focus-sub">Você ficou ≥80% em todos os assuntos avaliados. Mantém a revisão dos números-chave e segue firme.</p>
+    </div>`;
+  }
+
+  let missedHTML="";
+  if(missed.length){
+    missedHTML=`<div class="missed-list" id="missedList">
+      <h3>Questões erradas (${missed.length})</h3>
+      ${missed.map(pos=>`<div class="missed-item" data-i="${pos}">
+        <span class="mn">Q${pad(pos+1)}</span><span>${qAt(pos).q.slice(0,90)}${qAt(pos).q.length>90?'…':''}</span></div>`).join("")}
+    </div>`;
+  }
+
+  resultArea.innerHTML=`<div class="card result">
+    ${ring}
+    <h2>Resultado</h2>
+    <p class="sub">${hits} de ${scored.length||TOTAL} corretas${scored.length<TOTAL?` · (${TOTAL-scored.length} não pontuadas)`:""}</p>
+    <p class="verdict-msg" style="color:${color}">${msg}</p>
+    <div class="result-stats">
+      <div class="stat hit"><span class="n">${hits}</span><span class="l">Acertos</span></div>
+      <div class="stat miss"><span class="n">${missed.length}</span><span class="l">Erros</span></div>
+      <div class="stat"><span class="n">${pct}%</span><span class="l">Aproveitamento</span></div>
+    </div>
+    ${focusHTML}
+    ${diagHTML}
+    <div class="actions">
+      ${missed.length?`<button class="review" id="reviewBtn">Revisar questões erradas</button>`:""}
+      <button class="again" id="againBtn">Refazer simulado</button>
+    </div>
+    ${missedHTML}
+  </div>`;
+
+  // anima as barras do diagnóstico
+  requestAnimationFrame(()=>{
+    resultArea.querySelectorAll(".diag-fill").forEach((el,k)=>{
+      setTimeout(()=>{ el.style.width=el.dataset.w+"%"; el.style.background=el.dataset.c; }, 120+k*70);
+    });
+  });
+
+  requestAnimationFrame(()=>{ const rf=document.getElementById("ringFill"); if(rf) rf.style.strokeDashoffset=off; });
+  window.scrollTo({top:0,behavior:'smooth'});
+
+  const ag=document.getElementById("againBtn");
+  if(ag) ag.addEventListener("click",resetAll);
+  const rv=document.getElementById("reviewBtn");
+  if(rv) rv.addEventListener("click",()=>{ document.getElementById("missedList").classList.toggle("show"); });
+  resultArea.querySelectorAll(".missed-item").forEach(it=>{
+    it.addEventListener("click",()=>{ state.idx=parseInt(it.dataset.i); render(); window.scrollTo({top:0,behavior:'smooth'}); });
+  });
+  save();
+}
+
+function resetAll(){
+  state=freshState();   // nova rodada: reembaralha questões e opções
+  save(); render(); window.scrollTo({top:0,behavior:'smooth'});
+}
+
+document.getElementById("resetBtn").addEventListener("click",()=>{
+  if(confirm("Recomeçar do zero? Seu progresso atual será apagado.")) resetAll();
+});
+
+/* ============ START ============ */
+render();
+</script>
+</body>
+</html>

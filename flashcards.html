@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flashcards de Ergometria 2024 — SBC/DERC</title>
+<style>
+  :root{
+    --ink:#16181d; --paper:#f6f4ef; --card:#fffdf9; --line:#e3ddd1; --muted:#6d6b63;
+    --pulse:#c4382f; --pulse-deep:#8f231c; --good:#1f7a52; --good-bg:#e7f4ec;
+    --bad:#b5362c; --bad-bg:#fbe9e6; --accent:#0d4f63; --gold:#b9892f; --radius:16px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{font-family:"Iowan Old Style","Palatino Linotype",Georgia,serif;background:var(--paper);
+    color:var(--ink);line-height:1.55;min-height:100vh;padding:env(safe-area-inset-top) 0 0;
+    -webkit-tap-highlight-color:transparent}
+  .mono{font-family:"SFMono-Regular",ui-monospace,"Cascadia Mono",Menlo,Consolas,monospace}
+  .wrap{max-width:640px;margin:0 auto;padding:18px 18px 50px}
+
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:6px 2px 14px;border-bottom:2px solid var(--ink)}
+  .brand{display:flex;align-items:center;gap:10px}
+  .ecg{width:42px;height:26px;flex:none}
+  .ecg path{fill:none;stroke:var(--pulse);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;
+    stroke-dasharray:120;stroke-dashoffset:120;animation:trace 2.2s ease-in-out forwards}
+  @keyframes trace{to{stroke-dashoffset:0}}
+  .brand h1{font-size:1.02rem;font-weight:700;letter-spacing:.2px;line-height:1.15}
+  .brand small{display:block;font-size:.68rem;color:var(--muted);letter-spacing:.14em;
+    text-transform:uppercase;margin-top:2px}
+  .reset{font-size:.72rem;color:var(--muted);background:none;border:1px solid var(--line);
+    border-radius:20px;padding:5px 11px;cursor:pointer;white-space:nowrap;letter-spacing:.04em;font-family:inherit}
+  .reset:hover{color:var(--pulse);border-color:var(--pulse)}
+
+  /* progress + stats */
+  .topbar{display:flex;align-items:center;gap:12px;margin:16px 2px 4px}
+  .pbar{flex:1;height:7px;background:#e7e1d5;border-radius:99px;overflow:hidden}
+  .pfill{height:100%;width:0;background:linear-gradient(90deg,var(--pulse),var(--gold));
+    border-radius:99px;transition:width .4s cubic-bezier(.3,.8,.3,1)}
+  .pcount{font-size:.74rem;color:var(--muted);letter-spacing:.05em;white-space:nowrap}
+  .ministats{display:flex;gap:14px;justify-content:center;margin:10px 0 2px;font-size:.72rem;color:var(--muted)}
+  .ministats b{font-family:"SFMono-Regular",ui-monospace,monospace}
+  .ministats .know b{color:var(--good)} .ministats .dunno b{color:var(--pulse)}
+  .roundtag{text-align:center;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--gold);font-weight:700;margin-top:8px;min-height:1em}
+
+  /* card */
+  .scene{perspective:1600px;margin-top:14px}
+  .flip{position:relative;width:100%;min-height:340px;transform-style:preserve-3d;
+    transition:transform .55s cubic-bezier(.4,.2,.2,1);cursor:pointer}
+  .flip.flipped{transform:rotateY(180deg)}
+  .face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:24px 22px;display:flex;flex-direction:column;
+    box-shadow:0 1px 0 #fff inset,0 14px 36px -24px rgba(0,0,0,.45)}
+  .back{transform:rotateY(180deg);background:linear-gradient(180deg,#fffdf9,#fbf7ee)}
+
+  .face-top{display:flex;align-items:center;gap:9px;margin-bottom:14px}
+  .ctype{font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;font-weight:800;
+    color:#fff;padding:3px 9px;border-radius:20px}
+  .ctype.q{background:var(--accent)} .ctype.t{background:var(--gold)}
+  .cblock{font-size:.64rem;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);font-weight:700}
+
+  .front-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px}
+  .front-body .prompt{font-size:1.28rem;font-weight:600;line-height:1.45}
+  .front-body .term{font-size:1.7rem;font-weight:700;letter-spacing:.3px;color:var(--pulse-deep)}
+  .tap-hint{position:absolute;bottom:14px;left:0;right:0;text-align:center;font-size:.7rem;
+    color:var(--muted);letter-spacing:.08em;opacity:.8}
+  .tap-hint .ic{display:inline-block;animation:flx 1.8s ease-in-out infinite}
+  @keyframes flx{0%,100%{transform:rotateY(0)}50%{transform:rotateY(180deg)}}
+
+  .back .answer{font-size:1.06rem;line-height:1.5;flex:1;display:flex;align-items:center}
+  .back .answer b{color:var(--pulse-deep)}
+  .thm{display:flex;gap:10px;background:#fff;border:1px solid var(--gold);
+    border-radius:11px;padding:11px 13px;margin-top:12px}
+  .thm .ico{flex:none;font-size:1.05rem;line-height:1.3}
+  .thm .body{font-size:.88rem}
+  .thm .body strong{display:block;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--gold);margin-bottom:2px;font-weight:800}
+
+  /* judge buttons */
+  .judge{display:flex;gap:11px;margin-top:14px}
+  .judge button{flex:1;font-family:inherit;font-size:1rem;font-weight:700;padding:15px;
+    border-radius:13px;cursor:pointer;border:1.5px solid;transition:transform .08s,background .15s}
+  .judge button:active{transform:scale(.98)}
+  .j-dunno{color:var(--bad);border-color:var(--bad);background:#fff}
+  .j-dunno:hover{background:var(--bad-bg)}
+  .j-know{color:#fff;border-color:var(--good);background:var(--good)}
+  .j-know:hover{background:#18603f}
+  .judge-hint{text-align:center;font-size:.74rem;color:var(--muted);margin-top:11px}
+
+  .nav{display:flex;gap:10px;margin-top:14px}
+  .nav button{flex:1;font-family:inherit;font-size:.92rem;font-weight:600;padding:12px;
+    border-radius:11px;cursor:pointer;background:#fff;border:1.5px solid var(--line);color:var(--muted)}
+  .nav button:hover:not(:disabled){border-color:var(--ink);color:var(--ink)}
+  .nav button:disabled{opacity:.35;cursor:not-allowed}
+
+  /* result */
+  .result{text-align:center;padding:34px 22px}
+  .result .big{font-size:2.4rem}
+  .result h2{font-size:1.5rem;margin:6px 0}
+  .result .sub{color:var(--muted);font-size:.95rem;margin-bottom:18px}
+  .result-stats{display:flex;gap:10px;justify-content:center;margin-bottom:22px}
+  .rstat{flex:1;max-width:150px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 8px}
+  .rstat .n{font-family:"SFMono-Regular",ui-monospace,monospace;font-size:1.6rem;font-weight:700;display:block}
+  .rstat .l{font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:3px}
+  .rstat.k .n{color:var(--good)} .rstat.d .n{color:var(--pulse)}
+  .result .msg{font-size:1.05rem;font-weight:600;margin-bottom:22px}
+  .result .actions{display:flex;flex-direction:column;gap:10px}
+  .result .actions button{font-family:inherit;font-size:.96rem;font-weight:600;padding:14px;border-radius:12px;cursor:pointer}
+  .redo-hard{background:var(--pulse);color:#fff;border:none}
+  .redo-hard:hover{background:var(--pulse-deep)}
+  .redo-all{background:#fff;color:var(--accent);border:1.5px solid var(--accent)}
+  .redo-all:hover{background:#eef5f7}
+
+  footer{text-align:center;font-size:.7rem;color:var(--muted);margin-top:24px;line-height:1.5}
+  @media (max-width:480px){
+    .wrap{padding:14px 13px 44px}
+    .front-body .prompt{font-size:1.16rem} .front-body .term{font-size:1.45rem}
+    .flip{min-height:320px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .flip{transition:none} .ecg path{stroke-dashoffset:0} .tap-hint .ic{animation:none}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <svg class="ecg" viewBox="0 0 60 30" aria-hidden="true">
+        <path d="M1 15 H14 L18 15 L21 6 L25 24 L29 15 L33 15 L36 10 L40 20 L44 15 H59"/>
+      </svg>
+      <div>
+        <h1>Flashcards de Ergometria</h1>
+        <small>SBC / DERC · 2024</small>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <a href="index.html" class="reset" style="text-decoration:none;display:inline-flex;align-items:center">☰ menu</a>
+      <button class="reset" id="resetBtn">recomeçar</button>
+    </div>
+  </header>
+
+  <div id="studyArea">
+    <div class="topbar">
+      <div class="pbar"><div class="pfill" id="pfill"></div></div>
+      <span class="pcount mono" id="pcount">01 / 60</span>
+    </div>
+    <div class="ministats">
+      <span class="know">sei <b id="kCount">0</b></span>
+      <span class="dunno">não sei <b id="dCount">0</b></span>
+    </div>
+    <div class="roundtag" id="roundtag"></div>
+
+    <div class="scene">
+      <div class="flip" id="flip">
+        <div class="face front" id="frontFace"></div>
+        <div class="face back" id="backFace"></div>
+      </div>
+    </div>
+
+    <div id="judgeSlot"></div>
+
+    <div class="nav">
+      <button id="prevBtn">← Voltar</button>
+      <button id="flipBtn">Virar card</button>
+    </div>
+  </div>
+
+  <div id="resultArea"></div>
+
+  <footer>
+    Baseado na Diretriz Brasileira de Ergometria em População Adulta — 2024 (SBC/DERC).<br>
+    Material de estudo. Conferir sempre a fonte primária.
+  </footer>
+</div>
+
+<script>
+/* ===== DADOS — 60 cards mistos (q = pergunta, t = termo/conceito) ===== */
+const CARDS=[
+/* Contraindicações & segurança */
+{block:"Contraindicações",kind:"t",front:"Limite de PA em repouso que CONTRAINDICA o TE (absoluta)",
+ back:"<b>PAS ≥180 mmHg OU PAD >110 mmHg</b> em repouso, persistente.",
+ thm:"Não confunda com o limite de INTERRUPÇÃO intraesforço (PAS >250 / PAD 120–140)."},
+{block:"Contraindicações",kind:"q",front:"IAM contraindica o TE até quando?",
+ back:"<b>Antes de 5 dias</b> ou na presença de <b>complicações</b> (contraindicação absoluta).",
+ thm:"Número-chave: 5 dias + 'sem complicações'."},
+{block:"Contraindicações",kind:"q",front:"BAV de 2º grau Mobitz I assintomático: contraindicação absoluta ou relativa?",
+ back:"<b>Relativa.</b> Já Mobitz II, BAV 2:1, avançado e BAVT adquirido são absolutos (BAV de risco).",
+ thm:"Mobitz I = relativa; Mobitz II / BAVT adquirido = absoluta."},
+{block:"Contraindicações",kind:"t",front:"Tempo de suspensão das METILXANTINAS antes da prova com vasodilatador",
+ back:"<b>≥12 horas</b> (café, chá, chocolate, energéticos, teofilina). Dipiridamol prévio: ≥24h.",
+ thm:"Metilxantina = inibidor competitivo da adenosina → abole o efeito. Aminofilina é o antídoto."},
+{block:"Contraindicações",kind:"q",front:"Qual o principal risco que define as contraindicações ao estresse com VASODILATADOR?",
+ back:"O <b>broncoespasmo</b> (mal asmático, hiper-reatividade <3 meses). Também: BAV 2º/3º sem MP, PAS <90, AVC/AIT <2 meses.",
+ thm:"Vasodilatador → medo do brônquio. Dobutamina → medo da arritmia/obstrução."},
+{block:"Contraindicações",kind:"q",front:"Paciente com BRE de repouso: qual estresse escolher na cintilografia?",
+ back:"<b>Vasodilatador</b> (dipiridamol/adenosina) — GR I-A. Evita o defeito septal artefatual FC-dependente.",
+ thm:"BRE / WPW / marca-passo = vasodilatador (não esforço físico, não dobutamina)."},
+
+/* Critérios de interrupção */
+{block:"Interrupção",kind:"t",front:"Limites de PA para INTERROMPER o esforço",
+ back:"<b>PAS >250 mmHg</b>; <b>PAD ≥120</b> (normotenso) ou <b>≥140</b> (hipertenso); queda da PAS ≥20 mmHg após elevação.",
+ thm:"Repouso p/ não iniciar = 180/110. Esforço p/ interromper = 250/120–140."},
+{block:"Interrupção",kind:"q",front:"Que magnitude de desnível de ST obriga a INTERROMPER o exame?",
+ back:"Infra <b>≥3 mm</b> (adicional ao repouso) ou supra <b>≥2 mm</b> em derivação sem infarto prévio.",
+ thm:"Positividade isquêmica = 1 mm. Interrupção = 3 mm infra / 2 mm supra."},
+{block:"Interrupção",kind:"q",front:"Qual arritmia, mesmo em episódio único, é critério de interrupção?",
+ back:"<b>TVNS polimórfica</b> (um episódio). TVNS monomórfica isolada → individualizar.",
+ thm:"Polimorfismo é o gatilho. Pensar TV catecolaminérgica."},
+{block:"Interrupção",kind:"t",front:"Valor da escala de Borg (6–20) que indica exaustão / interrupção",
+ back:"<b>Borg ≥18.</b>",
+ thm:"Escala original 6–20. Não confundir com a Borg modificada (0–10)."},
+{block:"Interrupção",kind:"q",front:"Teto de FC de segurança no TE de portador de CDI?",
+ back:"<b>10 bpm abaixo</b> da FC de disparo programada do desfibrilador.",
+ thm:"Cheque a programação do CDI antes de iniciar."},
+
+/* Resposta cromotrópica & pressórica */
+{block:"Cromo/Pressórica",kind:"t",front:"Índice cronotrópico: fórmula e valor normal",
+ back:"ICr = (FCmáx atingida − FC repouso) / (FCmáx prevista − FC repouso) × 100. Normal <b>≥80%</b>.",
+ thm:"ICr <80% = incompetência cronotrópica (pior prognóstico)."},
+{block:"Cromo/Pressórica",kind:"t",front:"Queda normal da FC no 1º min de recuperação (ativa e passiva deitado)",
+ back:"Ativa <b>>12 bpm</b>; passiva deitado <b>>18 bpm</b>; 2º min sentado ≥22 bpm.",
+ thm:"Recuperação lenta = tônus vagal reduzido = maior mortalidade."},
+{block:"Cromo/Pressórica",kind:"t",front:"Critério de resposta hipertensiva (exagerada) da PAS ao esforço",
+ back:"PAS <b>≥210 mmHg (homens)</b> e <b>≥190 mmHg (mulheres)</b>.",
+ thm:"PAD anormal = elevação ≥15 mmHg e/ou >90 mmHg."},
+{block:"Cromo/Pressórica",kind:"q",front:"Queda da PAS no esforço (hipotensão esforço-induzida): o que significa?",
+ back:"Marcador de mau prognóstico (disfunção de VE, DAC grave). Na CMH = risco de morte súbita.",
+ thm:"PAS isolada caindo → isquemia; PAS+PAD caindo → déficit inotrópico/valvar."},
+
+/* ST / ECG básico */
+{block:"ST / ECG",kind:"t",front:"Critério clássico de positividade isquêmica do ST (ponto Y)",
+ back:"Infra <b>horizontal ou descendente ≥1 mm</b>, medido no ponto Y (60–80 ms após o ponto J).",
+ thm:"Ascendente lento precisa de 1,5–2 mm (menos confiável)."},
+{block:"ST / ECG",kind:"q",front:"No BRD, quais derivações NÃO valem para avaliar isquemia?",
+ back:"<b>V1, V2 e V3</b> (alterações secundárias do próprio BRD).",
+ thm:"BRD → ignore ST de V1–V3."},
+{block:"ST / ECG",kind:"q",front:"Supra de ST em aVR + infra em V4–V6: o que sugere?",
+ back:"Estenose de <b>tronco de coronária esquerda (TCE)</b> ou DA proximal.",
+ thm:"Supra em aVR: sensibilidade ~100% p/ TCE, especificidade baixa."},
+{block:"ST / ECG",kind:"q",front:"Quando o TE é 'NÃO diagnóstico' (≠ negativo) para DAC?",
+ back:"Quando <b>não atinge 85%</b> da FCmáx prevista, sem isquemia clínica/elétrica.",
+ thm:"Documente sempre o % da FCmáx atingido."},
+{block:"ST / ECG",kind:"q",front:"ISTE que surge só na recuperação tardia (>3 min): para onde puxa?",
+ back:"Aumenta a chance de <b>falso-positivo</b>. Já infra persistente/recorrente → DAC grave.",
+ thm:"Timing importa tanto quanto magnitude."},
+{block:"ST / ECG",kind:"q",front:"Hump sign em assintomático sem cardiopatia: significado?",
+ back:"Provável <b>falso-positivo</b> (ligado a HAS/resposta hipertensiva), bom prognóstico. Exceção: CMH.",
+ thm:"Na CMH, muda de figura (risco)."},
+
+/* Escores & prognóstico */
+{block:"Escores",kind:"t",front:"Fórmula do Escore de Duke (treadmill)",
+ back:"ED = tempo (min Bruce) − (5 × desnível ST mm) − (4 × angina). Angina: 0/1/2.",
+ thm:"Alto risco ≤ −11; baixo ≥ +5; intermediário no meio."},
+{block:"Escores",kind:"q",front:"Categorias de risco do Escore de Duke (cortes)",
+ back:"<b>Alto ≤ −11</b> (sobrevida 5a ~67%); intermediário −10 a +4; <b>baixo ≥ +5</b> (~97%).",
+ thm:"Indicado em sintomáticos 45–75 anos; limitado pós-CRVM/IAM recente."},
+{block:"Escores",kind:"t",front:"Sensibilidade e especificidade médias do TE para DAC",
+ back:"Sensibilidade <b>~69%</b>; especificidade <b>~75%</b>.",
+ thm:"Rende mais na probabilidade pré-teste intermediária (Bayes)."},
+{block:"Escores",kind:"t",front:"Conversão de 1 MET em consumo de oxigênio",
+ back:"<b>1 MET = 3,5 mL/kg/min</b> de VO₂.",
+ thm:"Capacidade funcional é dos preditores prognósticos mais robustos."},
+
+/* Protocolos & fisiologia */
+{block:"Protocolos",kind:"q",front:"Protocolo ideal para idoso sedentário com IC compensada?",
+ back:"<b>Naughton</b> (incrementos de ~1 MET/estágio).",
+ thm:"Baixa capacidade → Naughton; avaliação aeróbica fina → rampa; padrão → Bruce."},
+{block:"Protocolos",kind:"t",front:"Fórmula de VO₂máx no protocolo de Bruce (homens)",
+ back:"VO₂máx = (2,9 × tempo em min) + 8,33. Mulheres: (2,74 × tempo) + 8,03.",
+ thm:"Divida por 3,5 para obter METs."},
+{block:"Protocolos",kind:"t",front:"% da FCmáx prevista que define teste diagnóstico adequado",
+ back:"<b>≥85%</b> da FCmáx estimada.",
+ thm:"Equações: 220 − idade; 208 − (0,7×idade)."},
+{block:"Protocolos",kind:"t",front:"Parâmetros da recuperação ATIVA em esteira",
+ back:"<b>2,4 km/h (1,5 MPH), 2,5% de inclinação, por 1–3 min.</b>",
+ thm:"É o cenário em que se mede a queda de FC do 1º min ativo (>12 bpm)."},
+
+/* Cintilografia */
+{block:"Cintilografia",kind:"t",front:"Dose e tempo de infusão do DIPIRIDAMOL na CPM",
+ back:"<b>0,56 mg/kg/min (máx 60 mg) IV em 4 min</b>; radiofármaco 2–4 min após o término.",
+ thm:"Suspender dipiridamol prévio 24h; aminofilina como antídoto."},
+{block:"Cintilografia",kind:"t",front:"Dose e infusão da ADENOSINA na CPM",
+ back:"<b>140 µg/kg/min em bomba por 6 min</b>; radiofármaco no 3º min (meia-vida 2–10s).",
+ thm:"Efeitos adversos ~80% (mas ultracurtos, somem ao parar)."},
+{block:"Cintilografia",kind:"q",front:"Por que injetar o radiofármaco no PICO e manter +1 min no esforço físico?",
+ back:"Para garantir captação miocárdica do traçador na vigência de <b>fluxo coronário máximo</b>.",
+ thm:"MIBI: imagem 30–60 min. Tálio: 10–15 min (redistribuição)."},
+{block:"Cintilografia",kind:"q",front:"Assintomático de ALTO risco (ATP III): indicação de CPM?",
+ back:"<b>GR I-A.</b> Baixo risco = III (não indicar); intermediário = IIa-B/IIb-C.",
+ thm:"Agatston >400 ou ED <−11 também puxam para indicação forte."},
+{block:"Cintilografia",kind:"t",front:"Cortes de tempo pós-revascularização assintomática para indicar CPM",
+ back:"<b>CRVM ≥5 anos</b> → IIa-B; <b>ICP ≥2 anos</b> → IIa-B. Sintomático = I-B sempre.",
+ thm:"Cirúrgico 5 anos, percutâneo 2 anos."},
+
+/* Arritmias & situações especiais */
+{block:"Arritmias",kind:"q",front:"Extrassístoles supraventriculares isoladas no esforço: prognóstico?",
+ back:"Geralmente <b>benignas</b>. Exceção: idoso com ESV frequente (>5/estágio) → risco de FA (RR ~15).",
+ thm:"ESV isolada benigna; EV frequente em DAC = pior prognóstico."},
+{block:"Arritmias",kind:"q",front:"Papel do TE no BAVT CONGÊNITO?",
+ back:"Avaliar resposta ventricular/cronotrópica e auxiliar indicação de marca-passo (<b>I-B</b>).",
+ thm:"Congênito = pode fazer TE. Adquirido = contraindicação absoluta."},
+{block:"Arritmias",kind:"t",front:"Tempo de suspensão pré-TE: amiodarona, BB cardiosseletivo, digoxina",
+ back:"Amiodarona <b>30 dias</b>; BB cardiosseletivo <b>4 dias</b> (outros 7); digoxina <b>7 dias</b>.",
+ thm:"Digital imita isquemia no ST (infra falso-positivo)."},
+{block:"Arritmias",kind:"q",front:"Suspeita de TV polimórfica catecolaminérgica (TVPC): valor do TE?",
+ back:"Confirmação diagnóstica, avaliação terapêutica e indicação de CDI (<b>GR I</b>). O esforço é o gatilho.",
+ thm:"TVNS polimórfica ao esforço = parar e investigar."},
+
+/* ===== ECG aplicado ao TE ===== */
+{block:"ECG aplicado",kind:"q",front:"Como o QRS se comporta normalmente com o aumento da FC no esforço?",
+ back:"<b>Encurta</b> ~3–5 ms (R reduz amplitude, S reduz duração, Q aumenta discretamente).",
+ thm:"Se o QRS ALARGA no esforço, suspeite de anormalidade."},
+{block:"ECG aplicado",kind:"q",front:"Pseudonormalização da onda T no esforço: o que indica?",
+ back:"T invertida em repouso que vira positiva no pico → defeitos na CPM; em IAM prévio a baixa carga indica <b>viabilidade</b>.",
+ thm:"Com onda U invertida em V anteriores = DA crítica."},
+{block:"ECG aplicado",kind:"q",front:"Onda U negativa esforço-induzida (≥0,5 mV) em V2–V5: associada a quê?",
+ back:"<b>Isquemia aguda e DAC grave em DA.</b>",
+ thm:"A onda U é pequena mas fala alto sobre coronária."},
+{block:"ECG aplicado",kind:"q",front:"Em qual derivação a onda Q é SEMPRE patológica?",
+ back:"<b>V1.</b> (Critério geral de Q anormal: ≥40 ms ou >1/3 da R adjacente.)",
+ thm:"Q em D3 isolada pode ser fisiológica."},
+{block:"ECG aplicado",kind:"q",front:"Diminuição da onda S no esforço (sem alteração de ST): significado?",
+ back:"Pode refletir <b>isquemia subendocárdica</b> em DAC, aumentando a sensibilidade do TE.",
+ thm:"O QRS conta história além do ST quando o ST é ambíguo."},
+{block:"ECG aplicado",kind:"t",front:"AFQRS (fragmentação de QRS em alta frequência): critério de anormalidade",
+ back:"Redução <b>≥1 µV ou ≥50% da RQMN em ≥3 derivações</b> no esforço máximo. Mais sensível/específica que o ST.",
+ thm:"Com ISTs, VPN ~99% para isquemia grave."},
+{block:"ECG aplicado",kind:"q",front:"Infra do segmento PR >0,5 mm no esforço: o que pode refletir?",
+ back:"<b>Resposta atrial anormal</b> — sobrecarga de pressão atrial / isquemia.",
+ thm:"O átrio também responde: P que alarga + PR que infra = sinal sutil."},
+{block:"ECG aplicado",kind:"q",front:"Repolarização precoce: comportamento esperado no esforço?",
+ back:"Em jovens/atletas costuma <b>reduzir/desaparecer</b>. Persistência ao esforço foi vista em sintomáticos de risco.",
+ thm:"RP que some = tranquilizador; que persiste em quem teve evento = alerta."},
+{block:"ECG aplicado",kind:"q",front:"Onda T positiva, simétrica, apiculada (>2,5 mV) em V2–V4 com dor: o que é?",
+ back:"<b>T hiperaguda = isquemia grave.</b>",
+ thm:"Simetria é a marca da T isquêmica."},
+{block:"ECG aplicado",kind:"q",front:"ΔDQRS (variação da duração do QRS) ≥15 ms na cardiopatia isquêmica: prediz o quê?",
+ back:"<b>Arritmias ventriculares graves</b> (TV/FV), VPP 73%; normaliza após revascularização.",
+ thm:"QRS deve encurtar; se alarga (≥15 ms) = isquemia + risco arrítmico."},
+{block:"ECG aplicado",kind:"t",front:"Inclinação (slope) ST/FC: para que serve?",
+ back:"Relaciona o desnível de ST ao incremento da FC (μV/bpm), refinando a interpretação isquêmica.",
+ thm:"Melhor calculada em protocolo de rampa."},
+
+/* ===== Teste cardiopulmonar (TCP) ===== */
+{block:"TCP",kind:"q",front:"Diferença entre VO₂máximo e VO₂pico",
+ back:"<b>VO₂máx</b> = há platô do VO₂ apesar do ↑carga; <b>VO₂pico</b> = maior valor ao fim do esforço SEM platô.",
+ thm:"VO₂máx (platô) = padrão-ouro. VO₂pico = o que mais se usa."},
+{block:"TCP",kind:"t",front:"Valor do quociente respiratório (R) que indica esforço máximo",
+ back:"<b>R ≥1,10.</b> Sequência: 0,72 (repouso) → 0,82 (LV1) → 1,00 (LV2) → ≥1,10 (exaustão).",
+ thm:"Critério metabólico objetivo de esforço máximo."},
+{block:"TCP",kind:"t",front:"Valor de VE/VCO₂ que indica pior prognóstico na IC",
+ back:"<b>VE/VCO₂ ≥34.</b>",
+ thm:"Eficiência ventilatória ruim = pior desfecho. Preditor de mortalidade/hospitalização."},
+{block:"TCP",kind:"q",front:"Pulso de O₂ (VO₂/FC) em platô ou queda no esforço: o que sugere?",
+ back:"<b>Disfunção de VE / isquemia</b> — o PuO₂ é proxy do volume sistólico.",
+ thm:"No ORBITA, o platô do PuO₂ detectou objetivamente a isquemia."},
+{block:"TCP",kind:"t",front:"Valor normal da relação ΔVO₂/ΔWR e o que o achatamento indica",
+ back:"Normal <b>~10 mL/min/W</b> (linear). Achatamento → isquemia esforço-induzida com disfunção de VE.",
+ thm:"Melhor avaliada em cicloergômetro com rampa."},
+{block:"TCP",kind:"q",front:"Ventilação oscilatória ao esforço (EOV): marcador de quê?",
+ back:"<b>Gravidade e pior prognóstico na IC</b>, sobretudo se precoce e com ciclo >1 min.",
+ thm:"Respiração 'em ondas' (oscilação >15% da VE de repouso)."},
+{block:"TCP",kind:"t",front:"Faixa normal da reserva ventilatória (RV) ao esforço",
+ back:"<b>20% a 40%.</b> RV = (VVM − VEmáx)/VVM × 100; VVM ≈ VEF1 × 35–40.",
+ thm:"RV baixa = limitação pulmonar; RV preservada + VO₂ baixo = limitação cardíaca."},
+{block:"TCP",kind:"q",front:"O que é o LV1 (1º limiar ventilatório) e como identificá-lo indiretamente?",
+ back:"<b>Limiar anaeróbio/lactato.</b> Indireto: 1º ponto de dissociação — VE/VO₂ começa a subir SEM o VE/VCO₂ subir.",
+ thm:"Base da prescrição de treino na reabilitação."},
+{block:"TCP",kind:"t",front:"OUES: principal vantagem e comportamento na IC grave",
+ back:"Reprodutível e obtido de valores <b>submáximos</b>; OUES <b>baixo</b> na IC grave (pior prognóstico).",
+ thm:"Útil quando o paciente não vai ao esforço máximo."},
+{block:"TCP",kind:"q",front:"Por que a esteira gera VO₂máx/pico maior que o cicloergômetro?",
+ back:"Usa <b>maior massa muscular + trabalho contra a gravidade</b> → VO₂ ~5–15% maior.",
+ thm:"Bike: carga em Watts precisa, menos artefato, ideal pra ΔVO₂/ΔWR."},
+{block:"TCP",kind:"q",front:"Quais variáveis do TCPE são comumente anormais na disfunção de VE?",
+ back:"<b>VO₂pico↓, LV1↓, ΔVO₂/ΔWR achatada e VE/VCO₂ inclinada</b> (incompatibilidade V/Q).",
+ thm:"Na disfunção de VE o TCPE 'piora em conjunto' — leitura integrada."}
+];
+
+/* ===== ESTADO ===== */
+const TOTAL=CARDS.length;
+const STORE="ergo_flash_2024_v1";
+
+function shuffle(arr){const a=arr.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function freshState(){
+  return { queue:shuffle([...Array(TOTAL).keys()]), pos:0, flipped:false,
+           judged:{}, round:1, knowTotal:0, dunnoTotal:0, hard:[] };
+}
+let state=freshState();
+function load(){ try{const s=JSON.parse(localStorage.getItem(STORE)); if(s&&s.queue) state=s;}catch(e){} }
+function save(){ try{localStorage.setItem(STORE,JSON.stringify(state));}catch(e){} }
+load();
+
+/* ===== ELEMENTOS ===== */
+const studyArea=document.getElementById("studyArea");
+const resultArea=document.getElementById("resultArea");
+const flip=document.getElementById("flip");
+const frontFace=document.getElementById("frontFace");
+const backFace=document.getElementById("backFace");
+const judgeSlot=document.getElementById("judgeSlot");
+const pfill=document.getElementById("pfill");
+const pcount=document.getElementById("pcount");
+const kCount=document.getElementById("kCount");
+const dCount=document.getElementById("dCount");
+const roundtag=document.getElementById("roundtag");
+const prevBtn=document.getElementById("prevBtn");
+const flipBtn=document.getElementById("flipBtn");
+const pad=n=>String(n).padStart(2,"0");
+
+/* ===== RENDER ===== */
+function render(){
+  resultArea.innerHTML=""; studyArea.style.display="";
+  const total=state.queue.length;
+  const cardIdx=state.queue[state.pos];
+  const C=CARDS[cardIdx];
+
+  pfill.style.width=((state.pos)/total*100)+"%";
+  pcount.textContent=pad(state.pos+1)+" / "+pad(total);
+  kCount.textContent=state.knowTotal;
+  dCount.textContent=state.dunnoTotal;
+  roundtag.textContent = state.round>1 ? "Rodada "+state.round+" · revisando os difíceis" : "";
+
+  // monta as faces
+  const typeLabel = C.kind==="q" ? "Pergunta" : "Conceito";
+  const typeCls = C.kind==="q" ? "q" : "t";
+  frontFace.innerHTML=`
+    <div class="face-top"><span class="ctype ${typeCls}">${typeLabel}</span><span class="cblock">${C.block}</span></div>
+    <div class="front-body">
+      ${C.kind==="t" ? `<div class="term">${C.front}</div>` : `<div class="prompt">${C.front}</div>`}
+    </div>
+    <div class="tap-hint"><span class="ic">⟳</span> toque para virar</div>`;
+  backFace.innerHTML=`
+    <div class="face-top"><span class="ctype ${typeCls}">Resposta</span><span class="cblock">${C.block}</span></div>
+    <div class="answer">${C.back}</div>
+    <div class="thm"><span class="ico">🎯</span><div class="body"><strong>Take home</strong>${C.thm}</div></div>`;
+
+  // reset flip
+  state.flipped=false;
+  flip.classList.remove("flipped");
+  flipBtn.textContent="Virar card";
+
+  judgeSlot.innerHTML="";
+  prevBtn.disabled = state.pos===0;
+  save();
+}
+
+function doFlip(){
+  state.flipped=!state.flipped;
+  flip.classList.toggle("flipped",state.flipped);
+  flipBtn.textContent = state.flipped ? "Ver pergunta" : "Virar card";
+  if(state.flipped) showJudge();
+  else judgeSlot.innerHTML="";
+  save();
+}
+
+function showJudge(){
+  judgeSlot.innerHTML=`
+    <div class="judge">
+      <button class="j-dunno" id="jDunno">Não sei ✕</button>
+      <button class="j-know" id="jKnow">Sei ✓</button>
+    </div>
+    <p class="judge-hint">Marque com sinceridade — os "não sei" voltam no fim.</p>`;
+  document.getElementById("jKnow").addEventListener("click",()=>judge(true));
+  document.getElementById("jDunno").addEventListener("click",()=>judge(false));
+}
+
+function judge(known){
+  const cardIdx=state.queue[state.pos];
+  // contabiliza só a 1ª vez que julga cada card na vida do estado (evita dupla contagem ao voltar)
+  if(state.judged[cardIdx]===undefined){
+    if(known) state.knowTotal++; else state.dunnoTotal++;
+  } else {
+    // re-julgamento: ajusta contadores
+    if(state.judged[cardIdx]===false && known){ state.dunnoTotal--; state.knowTotal++; }
+    if(state.judged[cardIdx]===true && !known){ state.knowTotal--; state.dunnoTotal++; }
+  }
+  state.judged[cardIdx]=known;
+  if(!known && !state.hard.includes(cardIdx)) state.hard.push(cardIdx);
+  if(known) state.hard=state.hard.filter(x=>x!==cardIdx);
+  advance();
+}
+
+function advance(){
+  if(state.pos < state.queue.length-1){
+    state.pos++; render(); window.scrollTo({top:0,behavior:'smooth'});
+  } else {
+    finishRound();
+  }
+}
+
+function finishRound(){
+  // se sobraram cards "não sei", inicia nova rodada só com eles
+  if(state.hard.length>0){
+    showRoundResult();
+  } else {
+    showFinal();
+  }
+}
+
+/* tela de fim de rodada (ainda há difíceis) */
+function showRoundResult(){
+  studyArea.style.display="none";
+  pfill.style.width="100%";
+  const hardN=state.hard.length;
+  resultArea.innerHTML=`<div class="face result" style="position:relative;border-radius:var(--radius);border:1px solid var(--line);background:var(--card)">
+    <div class="big">🔁</div>
+    <h2>Rodada ${state.round} concluída</h2>
+    <p class="sub">Você marcou <b style="color:var(--good)">${state.knowTotal}</b> como "sei" e ainda tem <b style="color:var(--pulse)">${hardN}</b> ${hardN===1?'card':'cards'} para revisar.</p>
+    <div class="actions">
+      <button class="redo-hard" id="goHard">Revisar os ${hardN} difíceis →</button>
+      <button class="redo-all" id="goAll">Recomeçar tudo do zero</button>
+    </div>
+  </div>`;
+  document.getElementById("goHard").addEventListener("click",()=>{
+    state.queue=shuffle(state.hard.slice());
+    state.hard=[];
+    state.pos=0; state.round++;
+    studyArea.style.display="";
+    render(); window.scrollTo({top:0,behavior:'smooth'});
+  });
+  document.getElementById("goAll").addEventListener("click",resetAll);
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* tela final (dominou tudo) */
+function showFinal(){
+  studyArea.style.display="none";
+  pfill.style.width="100%";
+  const totalSeen=state.knowTotal+ (TOTAL - state.knowTotal); // todos vistos
+  resultArea.innerHTML=`<div class="face result" style="position:relative;border-radius:var(--radius);border:1px solid var(--line);background:var(--card)">
+    <div class="big">🏆</div>
+    <h2>Baralho dominado!</h2>
+    <p class="sub">Você passou por todos os ${TOTAL} cards e marcou "sei" em todos os que revisou. Mandou muito bem.</p>
+    <div class="result-stats">
+      <div class="rstat k"><span class="n">${TOTAL}</span><span class="l">Cards</span></div>
+      <div class="rstat"><span class="n">${state.round}</span><span class="l">Rodadas</span></div>
+    </div>
+    <p class="msg" style="color:var(--good)">Pronta pra prova. Bora revisar de novo amanhã pra fixar de vez.</p>
+    <div class="actions">
+      <button class="redo-all" id="goAll2">Recomeçar do zero (reembaralha)</button>
+    </div>
+  </div>`;
+  document.getElementById("goAll2").addEventListener("click",resetAll);
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function resetAll(){
+  state=freshState();
+  studyArea.style.display="";
+  save(); render(); window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* ===== EVENTOS ===== */
+flip.addEventListener("click",doFlip);
+flipBtn.addEventListener("click",(e)=>{e.stopPropagation();doFlip();});
+prevBtn.addEventListener("click",(e)=>{
+  e.stopPropagation();
+  if(state.pos>0){ state.pos--; render(); window.scrollTo({top:0,behavior:'smooth'}); }
+});
+document.getElementById("resetBtn").addEventListener("click",()=>{
+  if(confirm("Recomeçar do zero? O progresso atual será apagado.")) resetAll();
+});
+// teclado (desktop): espaço/seta = vira; ←/→ navega; S/N julga
+document.addEventListener("keydown",(e)=>{
+  if(resultArea.innerHTML.trim()!=="") return;
+  if(e.code==="Space"){e.preventDefault();doFlip();}
+  else if(e.key==="ArrowLeft"&&state.pos>0){state.pos--;render();}
+  else if(e.key==="s"||e.key==="S"){ if(state.flipped) judge(true);}
+  else if(e.key==="n"||e.key==="N"){ if(state.flipped) judge(false);}
+});
+
+/* ===== START ===== */
+render();
+</script>
+</body>
+</html>
