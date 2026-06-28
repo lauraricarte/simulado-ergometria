@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz — TE em Portadores de DCEI</title>
+<style>
+  :root{
+    --ink:#16181d;
+    --paper:#f6f4ef;
+    --card:#fffdf9;
+    --line:#e3ddd1;
+    --muted:#6d6b63;
+    --pulse:#c4382f;       /* vermelho cardio */
+    --pulse-deep:#8f231c;
+    --good:#1f7a52;
+    --good-bg:#e7f4ec;
+    --bad:#b5362c;
+    --bad-bg:#fbe9e6;
+    --accent:#0d4f63;      /* azul ECG */
+    --gold:#b9892f;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    font-family:"Iowan Old Style","Palatino Linotype",Georgia,serif;
+    background:var(--paper);
+    color:var(--ink);
+    line-height:1.55;
+    min-height:100vh;
+    padding:env(safe-area-inset-top) 0 0;
+  }
+  .mono{font-family:"SFMono-Regular",ui-monospace,"Cascadia Mono",Menlo,Consolas,monospace}
+  .wrap{max-width:680px;margin:0 auto;padding:18px 18px 60px}
+
+  /* ---------- header ---------- */
+  header{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:12px;padding:6px 2px 14px;border-bottom:2px solid var(--ink);
+  }
+  .brand{display:flex;align-items:center;gap:10px}
+  .ecg{width:42px;height:26px;flex:none}
+  .ecg path{fill:none;stroke:var(--pulse);stroke-width:2.4;
+    stroke-linecap:round;stroke-linejoin:round;
+    stroke-dasharray:120;stroke-dashoffset:120;
+    animation:trace 2.2s ease-in-out forwards}
+  @keyframes trace{to{stroke-dashoffset:0}}
+  .brand h1{font-size:1.02rem;font-weight:700;letter-spacing:.2px;line-height:1.15}
+  .brand small{display:block;font-size:.68rem;color:var(--muted);
+    letter-spacing:.14em;text-transform:uppercase;font-family:inherit;margin-top:2px}
+  .reset{
+    font-family:inherit;font-size:.72rem;color:var(--muted);
+    background:none;border:1px solid var(--line);border-radius:20px;
+    padding:5px 11px;cursor:pointer;white-space:nowrap;letter-spacing:.04em
+  }
+  .reset:hover{color:var(--pulse);border-color:var(--pulse)}
+
+  /* ---------- progress ---------- */
+  .pbar-row{display:flex;align-items:center;gap:12px;margin:16px 2px 6px}
+  .pbar{flex:1;height:7px;background:#e7e1d5;border-radius:99px;overflow:hidden}
+  .pfill{height:100%;width:0;background:linear-gradient(90deg,var(--pulse),var(--gold));
+    border-radius:99px;transition:width .4s cubic-bezier(.3,.8,.3,1)}
+  .pcount{font-size:.74rem;color:var(--muted);letter-spacing:.06em;white-space:nowrap}
+
+  /* ---------- card ---------- */
+  .card{
+    background:var(--card);border:1px solid var(--line);
+    border-radius:var(--radius);padding:22px 20px 24px;margin-top:14px;
+    box-shadow:0 1px 0 #fff inset, 0 10px 30px -22px rgba(0,0,0,.4);
+    animation:rise .35s ease both
+  }
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+  .qtop{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
+  .qnum{font-family:"SFMono-Regular",ui-monospace,monospace;font-size:.72rem;
+    color:#fff;background:var(--ink);padding:3px 8px;border-radius:6px;letter-spacing:.05em}
+  .qtag{font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--accent);font-weight:700}
+  .qtext{font-size:1.12rem;line-height:1.5;margin:10px 0 4px;font-weight:600}
+  .qcase{font-size:1.0rem;color:#2b2d33;margin-bottom:14px;font-style:italic}
+
+  /* ---------- options ---------- */
+  .opts{display:flex;flex-direction:column;gap:9px;margin-top:6px}
+  .opt{
+    text-align:left;font-family:inherit;font-size:.98rem;color:var(--ink);
+    background:#fff;border:1.5px solid var(--line);border-radius:11px;
+    padding:13px 14px;cursor:pointer;display:flex;gap:11px;align-items:flex-start;
+    transition:border-color .15s, background .15s, transform .08s
+  }
+  .opt:hover:not(:disabled){border-color:var(--accent)}
+  .opt:active:not(:disabled){transform:scale(.992)}
+  .opt .key{font-family:"SFMono-Regular",ui-monospace,monospace;font-weight:700;
+    color:var(--accent);flex:none;width:1.1em}
+  .opt:disabled{cursor:default}
+  .opt.correct{border-color:var(--good);background:var(--good-bg)}
+  .opt.correct .key{color:var(--good)}
+  .opt.wrong{border-color:var(--bad);background:var(--bad-bg)}
+  .opt.wrong .key{color:var(--bad)}
+  .opt .mark{margin-left:auto;font-weight:700;flex:none}
+  .opt.correct .mark{color:var(--good)}
+  .opt.wrong .mark{color:var(--bad)}
+
+  /* open / self-assess (no options) */
+  .reveal-btn{
+    font-family:inherit;font-size:.95rem;font-weight:600;color:#fff;
+    background:var(--accent);border:none;border-radius:11px;
+    padding:13px 16px;cursor:pointer;width:100%;letter-spacing:.02em;
+    transition:background .15s,transform .08s
+  }
+  .reveal-btn:hover{background:#0a3f50}
+  .reveal-btn:active{transform:scale(.99)}
+  .selfrow{display:flex;gap:9px;margin-top:12px}
+  .selfrow button{flex:1;font-family:inherit;font-size:.9rem;font-weight:600;
+    border-radius:10px;padding:11px;cursor:pointer;border:1.5px solid var(--line);background:#fff}
+  .self-hit{color:var(--good);border-color:var(--good)}
+  .self-hit:hover{background:var(--good-bg)}
+  .self-miss{color:var(--bad);border-color:var(--bad)}
+  .self-miss:hover{background:var(--bad-bg)}
+
+  /* ---------- feedback ---------- */
+  .fb{margin-top:18px;animation:rise .3s ease both}
+  .verdict{display:flex;align-items:center;gap:9px;font-weight:700;
+    font-size:1.02rem;margin-bottom:12px}
+  .verdict.ok{color:var(--good)}
+  .verdict.no{color:var(--bad)}
+  .verdict .dot{width:10px;height:10px;border-radius:50%;flex:none}
+  .verdict.ok .dot{background:var(--good)}
+  .verdict.no .dot{background:var(--bad)}
+
+  .ans{background:#fbf8f1;border-left:3px solid var(--gold);
+    padding:11px 14px;border-radius:0 9px 9px 0;margin-bottom:13px;font-size:.97rem}
+  .ans b{color:var(--pulse-deep)}
+
+  .block-label{font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--muted);font-weight:700;margin:0 0 5px}
+  .explain{font-size:.95rem;color:#33353b;margin-bottom:15px}
+  .explain b{color:var(--ink)}
+
+  .thm{display:flex;gap:11px;background:linear-gradient(180deg,#fff,#fdfbf6);
+    border:1px solid var(--gold);border-radius:11px;padding:13px 14px}
+  .thm .ico{flex:none;font-size:1.15rem;line-height:1.3}
+  .thm .body{font-size:.93rem}
+  .thm .body strong{display:block;font-size:.66rem;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--gold);margin-bottom:3px;font-weight:800}
+
+  /* ---------- nav ---------- */
+  .nav{display:flex;gap:10px;margin-top:20px}
+  .nav button{flex:1;font-family:inherit;font-size:.95rem;font-weight:600;
+    padding:13px;border-radius:11px;cursor:pointer;transition:transform .08s,opacity .15s}
+  .nav button:active{transform:scale(.99)}
+  .btn-prev{background:#fff;border:1.5px solid var(--line);color:var(--muted)}
+  .btn-prev:hover{border-color:var(--ink);color:var(--ink)}
+  .btn-next{background:var(--pulse);border:1.5px solid var(--pulse);color:#fff}
+  .btn-next:hover{background:var(--pulse-deep);border-color:var(--pulse-deep)}
+  .btn-next:disabled{opacity:.4;cursor:not-allowed}
+  .btn-next:disabled:hover{background:var(--pulse);border-color:var(--pulse)}
+
+  /* ---------- results ---------- */
+  .result{text-align:center;padding:30px 22px 34px}
+  .result .score-ring{margin:0 auto 18px;display:block}
+  .result h2{font-size:1.5rem;margin-bottom:6px}
+  .result .pct{font-family:"SFMono-Regular",ui-monospace,monospace;
+    font-size:2.6rem;font-weight:700;line-height:1}
+  .result .sub{color:var(--muted);font-size:.92rem;margin:8px 0 4px}
+  .result .verdict-msg{font-size:1.05rem;margin:14px 0 22px;font-weight:600}
+  .result-stats{display:flex;gap:10px;justify-content:center;margin-bottom:24px}
+  .stat{flex:1;max-width:130px;background:#fff;border:1px solid var(--line);
+    border-radius:11px;padding:13px 8px}
+  .stat .n{font-family:"SFMono-Regular",ui-monospace,monospace;font-size:1.5rem;font-weight:700;display:block}
+  .stat .l{font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:3px}
+  .stat.hit .n{color:var(--good)}
+  .stat.miss .n{color:var(--bad)}
+  .result .actions{display:flex;flex-direction:column;gap:10px}
+  .result .actions button{font-family:inherit;font-size:.96rem;font-weight:600;
+    padding:13px;border-radius:11px;cursor:pointer}
+  .again{background:var(--pulse);color:#fff;border:none}
+  .again:hover{background:var(--pulse-deep)}
+  .review{background:#fff;color:var(--accent);border:1.5px solid var(--accent)}
+  .review:hover{background:#eef5f7}
+  /* prioridade de estudo */
+  .focus{text-align:left;margin:8px 0 20px;border:1px solid var(--gold);
+    background:linear-gradient(180deg,#fffdf7,#fdf8ec);border-radius:12px;padding:15px 16px}
+  .focus.all-good{border-color:var(--good);background:linear-gradient(180deg,#f6fbf8,#eaf5ee)}
+  .focus-head{display:flex;align-items:center;gap:8px;font-weight:700;font-size:1rem;margin-bottom:5px}
+  .focus-sub{font-size:.86rem;color:var(--muted);margin-bottom:10px;line-height:1.45}
+  .focus-list{list-style:none;counter-reset:fl;display:flex;flex-direction:column;gap:7px}
+  .focus-list li{counter-increment:fl;display:flex;align-items:center;gap:10px;
+    font-size:.92rem;background:#fff;border:1px solid var(--line);border-radius:9px;padding:9px 12px}
+  .focus-list li::before{content:counter(fl);font-family:"SFMono-Regular",ui-monospace,monospace;
+    font-weight:700;color:#fff;background:var(--pulse);width:22px;height:22px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-size:.72rem;flex:none}
+  .focus-list .fl-name{flex:1}
+  .focus-list .fl-meta{font-weight:700;font-size:.82rem}
+
+  /* desempenho por assunto */
+  .diag{text-align:left;margin:4px 0 20px}
+  .diag-row{margin-bottom:13px}
+  .diag-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:5px}
+  .diag-name{font-size:.88rem;font-weight:600}
+  .diag-tag{font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;font-weight:800;
+    border:1px solid;border-radius:20px;padding:2px 8px;flex:none}
+  .diag-bar{height:8px;background:#e7e1d5;border-radius:99px;overflow:hidden}
+  .diag-fill{height:100%;border-radius:99px;transition:width .8s cubic-bezier(.3,.8,.3,1)}
+  .diag-frac{display:block;font-size:.7rem;color:var(--muted);margin-top:4px;text-align:right}
+
+  .missed-list{text-align:left;margin-top:22px;border-top:1px solid var(--line);padding-top:16px;display:none}
+  .missed-list.show{display:block}
+  .missed-list h3{font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--muted);margin-bottom:10px}
+  .missed-item{font-size:.88rem;padding:9px 11px;background:#fff;border:1px solid var(--line);
+    border-radius:9px;margin-bottom:7px;cursor:pointer;display:flex;gap:9px}
+  .missed-item:hover{border-color:var(--pulse)}
+  .missed-item .mn{font-family:"SFMono-Regular",ui-monospace,monospace;color:var(--pulse);font-weight:700;flex:none}
+
+  footer{text-align:center;font-size:.7rem;color:var(--muted);margin-top:26px;line-height:1.5}
+
+  @media (max-width:480px){
+    .wrap{padding:14px 13px 50px}
+    .qtext{font-size:1.06rem}
+    .brand h1{font-size:.92rem}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none!important;transition:none!important}
+    .ecg path{stroke-dashoffset:0}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <svg class="ecg" viewBox="0 0 60 30" aria-hidden="true">
+        <path d="M1 15 H14 L18 15 L21 6 L25 24 L29 15 L33 15 L36 10 L40 20 L44 15 H59"/>
+      </svg>
+      <div>
+        <h1>TE em Portadores de DCEI</h1>
+        <small>Marca-passo · CDI · Ressincronizador</small>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <a href="index.html" class="reset" style="text-decoration:none;display:inline-flex;align-items:center">☰ menu</a>
+      <button class="reset" id="resetBtn" title="Recomeçar do zero">recomeçar</button>
+    </div>
+  </header>
+
+  <div id="quizArea">
+    <div class="pbar-row">
+      <div class="pbar"><div class="pfill" id="pfill"></div></div>
+      <span class="pcount mono" id="pcount">01 / 20</span>
+    </div>
+    <div id="cardSlot"></div>
+    <div class="nav">
+      <button class="btn-prev" id="prevBtn">← Anterior</button>
+      <button class="btn-next" id="nextBtn" disabled>Próxima →</button>
+    </div>
+  </div>
+
+  <div id="resultArea"></div>
+
+  <footer>
+    Baseado em Hossri et al. Teste Ergométrico em Portadores de DCEI. Rev Bras Cardiol. 2014;27(3):217-227.<br>
+    Material de estudo. Conferir sempre a fonte primária.
+  </footer>
+</div>
+
+<script>
+/* ============ DADOS ============ */
+/* type:"mc" = múltipla escolha (correct = índice); type:"open" = dissertativa/auto-avaliação */
+const QUESTIONS = [
+/* BLOCO 1 — Indicações e segurança */
+{block:"Indicações & segurança",type:"mc",
+ q:"Segundo o artigo, qual é a indicação de TE para investigar DAC isolada (sem imagem) em portador de marca-passo?",
+ options:[
+   "Classe I",
+   "Classe IIa",
+   "Classe III (não indicado), exceto se associado a método de imagem",
+   "Classe IIb"],
+ correct:2,
+ answer:"Classe III pela diretriz brasileira e americana — exceto quando associado a método de imagem (ex.: cintilografia).",
+ explain:"A própria estimulação do MP altera a repolarização (QRS alargado tipo BRE), inviabilizando a leitura do ST para isquemia. Por isso o TE isolado é <b>classe III</b> para DAC no portador de MP; só ganha valor quando combinado a imagem (cintilografia de perfusão).",
+ thm:"MP + investigação de DAC = classe III no TE isolado. Precisa de imagem (cintilografia)."},
+
+{block:"Indicações & segurança",type:"mc",
+ q:"Qual é o objetivo de duração do exercício no TE de portadores de DCEI e a preferência de ergômetro?",
+ options:[
+   "5–8 min, preferindo esteira",
+   "8–12 min, sem preferência entre esteira e cicloergômetro",
+   "15–20 min, preferindo cicloergômetro",
+   "Até a exaustão, sempre em esteira"],
+ correct:1,
+ answer:"8–12 min de exercício; não há preferência entre esteira e cicloergômetro.",
+ explain:"A escolha do protocolo segue os mesmos critérios convencionais da ergometria, mirando 8–12 min. Apesar de existirem 2 protocolos propostos para esse perfil, nem a SBC nem a ESC os consideram superiores aos protocolos convencionais.",
+ thm:"Mesma lógica convencional: 8–12 min, esteira OU bike. Não há protocolo 'especial' superior validado."},
+
+{block:"Indicações & segurança",type:"mc",
+ q:"Quais condições mínimas o artigo exige para a realização segura do TE em portador de DCEI?",
+ options:[
+   "Apenas um técnico de enfermagem presente",
+   "Material de Suporte Avançado de Vida disponível, preferencialmente em ambiente hospitalar, médico capacitado",
+   "Realizar somente em UTI",
+   "Dispensa-se monitorização contínua"],
+ correct:1,
+ answer:"Médico capacitado, material de SAVC disponível e, preferencialmente, ambiente hospitalar.",
+ explain:"O TE em DCEI é seguro desde que seguidas as recomendações do Departamento de Ergometria da SBC. É indispensável material de Suporte Avançado de Vida em Cardiologia na sala, e sugere-se ambiente hospitalar.",
+ thm:"Seguro, mas com SAVC à mão e de preferência hospitalar."},
+
+{block:"Indicações & segurança",type:"open",
+ q:"Cite ao menos 3 das 5 aplicações do TE em portadores de DCEI listadas no artigo (Quadro 1).",
+ answer:"(1) Avaliação da capacidade funcional aeróbica; (2) investigação de arritmias / avaliação da terapêutica farmacológica; (3) avaliação pré-participação desportiva; (4) avaliação de possíveis disfunções dos DCEI; (5) avaliação/programação dos sensores dos DCEI.",
+ explain:"O TE complementa a telemetria de consultório, permitindo avaliar o dispositivo sob esforço padronizado — capacidade funcional, eficácia antiarrítmica, liberação esportiva, detecção de disfunção e ajuste de sensores.",
+ thm:"5 usos: capacidade funcional · arritmias/fármacos · pré-esporte · disfunção do DCEI · sensores."},
+
+/* BLOCO 2 — Código NASPE/BPEG e modos */
+{block:"Código & modos de MP",type:"mc",
+ q:"No código NASPE/BPEG, o que representa a 1ª e a 2ª letra?",
+ options:[
+   "1ª = câmara sentida; 2ª = câmara estimulada",
+   "1ª = câmara estimulada; 2ª = câmara sentida",
+   "1ª = resposta ao sensing; 2ª = programabilidade",
+   "1ª = função antitaquicardia; 2ª = câmara estimulada"],
+ correct:1,
+ answer:"1ª letra = câmara ESTIMULADA; 2ª letra = câmara SENTIDA (A, V, D ou O em ambas).",
+ explain:"Sequência do código: <b>1ª</b> câmara estimulada · <b>2ª</b> câmara sentida · <b>3ª</b> resposta ao sensing (T/I/D/O) · <b>4ª</b> programabilidade/resposta de frequência (R) · <b>5ª</b> função antitaquicardia (P/S/D/O).",
+ thm:"Ordem: Estimula → Sente → Responde → (R)esposta de frequência → antitaquicardia."},
+
+{block:"Código & modos de MP",type:"mc",
+ q:"O que significa a 3ª letra do código quando é 'I'?",
+ options:[
+   "Deflagração (trigger)",
+   "Inibição: o MP se inibe ao detectar um evento espontâneo",
+   "Modo assíncrono",
+   "Indicação de ressincronização"],
+ correct:1,
+ answer:"Inibição — o MP suprime o estímulo quando sente um evento espontâneo.",
+ explain:"3ª letra (resposta ao sensing): T (deflagração), <b>I (inibição)</b>, D (deflagração + inibição), O (sem resposta). Ex.: VVI estimula e sente o ventrículo, inibindo-se na presença de uma onda R.",
+ thm:"I = inibe na presença de evento próprio. É o comportamento 'demanda'."},
+
+{block:"Código & modos de MP",type:"mc",
+ q:"Por que o modo DDD é chamado de 'marca-passo fisiológico'?",
+ options:[
+   "Porque só estimula o átrio",
+   "Porque estimula e sente átrio e ventrículo, deflagrando o VD quando sente o átrio (mantém sincronismo AV)",
+   "Porque nunca se inibe",
+   "Porque dispensa eletrodos"],
+ correct:1,
+ answer:"Estimula e sente ambas as câmaras, deflagra o ventrículo após sentir o átrio e inibe quando sente o ventrículo — preservando o sincronismo AV.",
+ explain:"O DDD acompanha a atividade atrial estimulando o VD no momento certo (mantém a 'fisiologia' AV), inclusive durante BAVT, desde que haja atividade atrial. Daí o apelido de fisiológico.",
+ thm:"DDD = bicameral que respeita o sincronismo AV → 'fisiológico'."},
+
+{block:"Código & modos de MP",type:"mc",
+ q:"O que indica a letra 'R' na 4ª posição do código (ex.: DDDR)?",
+ options:[
+   "Função de desfibrilação",
+   "Resposta de frequência por sensor (rate response)",
+   "Ressincronização",
+   "Modo refratário"],
+ correct:1,
+ answer:"Resposta de frequência (rate response) — o sensor ajusta a FC à demanda metabólica.",
+ explain:"Sempre que o sensor está ativado, aparece o <b>R</b> na 4ª posição. Isso é crítico: em programações com mudança automática de modo, recomenda-se manter o sensor (VVIR/DDIR) para evitar queda abrupta da FC ao esforço se surgir arritmia atrial.",
+ thm:"R = sensor ligado. Importante no esforço para garantir resposta cronotrópica."},
+
+/* BLOCO 3 — ECG e conceitos de estimulação */
+{block:"ECG & estimulação",type:"mc",
+ q:"No portador de MP com eletrodo em ventrículo direito, qual a morfologia esperada do QRS?",
+ options:[
+   "Tipo bloqueio de ramo direito",
+   "Tipo bloqueio de ramo esquerdo (a mais frequente)",
+   "QRS estreito normal",
+   "Padrão de WPW"],
+ correct:1,
+ answer:"Morfologia tipo BRE (QRS geralmente >120 ms) — a mais frequente. Eletrodo em VE gera morfologia tipo BRD.",
+ explain:"A despolarização parte do VD, ativando o VE por último → padrão tipo BRE. A espícula precede o QRS; com estimulação bipolar pode ser de baixa amplitude e difícil de ver, mas a morfologia típica do QRS é preservada.",
+ thm:"Eletrodo no VD → QRS tipo BRE. Eletrodo no VE → tipo BRD."},
+
+{block:"ECG & estimulação",type:"mc",
+ q:"O que é HISTERESE na programação do marca-passo?",
+ options:[
+   "A frequência máxima de estimulação",
+   "Permite FC espontânea abaixo da frequência básica (intervalo de escape maior), economizando estimulação",
+   "Um tipo de arritmia mediada pelo MP",
+   "O período refratário atrial"],
+ correct:1,
+ answer:"Intervalo maior que o da frequência básica, acionado por eventos espontâneos — permite ritmo próprio mais lento antes do MP assumir.",
+ explain:"Com histerese positiva, o <b>intervalo de escape</b> (do batimento sentido até a próxima espícula) é maior que o intervalo de pulso, deixando o coração bater sozinho em FC abaixo da básica, desde que acima da frequência de histerese. Favorece o ritmo próprio.",
+ thm:"Histerese = deixa o coração 'tentar sozinho' antes de estimular. Escape > pulso."},
+
+{block:"ECG & estimulação",type:"mc",
+ q:"Como se calcula o INTERVALO DE PULSO do marca-passo?",
+ options:[
+   "60000 ms ÷ frequência programada",
+   "Frequência programada ÷ 60",
+   "1000 ms × frequência",
+   "FC máxima − FC básica"],
+ correct:0,
+ answer:"Intervalo de pulso (ms) = 60000 ÷ frequência programada (inversamente proporcional à FC).",
+ explain:"É o tempo entre duas espículas consecutivas da mesma câmara. Ex.: FC de 60 → 60000/60 = 1000 ms entre espículas. Quanto maior a frequência, menor o intervalo.",
+ thm:"Intervalo de pulso = 60000 ÷ FC. Decoreba útil para a prática."},
+
+{block:"ECG & estimulação",type:"open",
+ q:"Diferencie FUSÃO de PSEUDOFUSÃO no ECG do portador de MP.",
+ answer:"Fusão = ativação artificial simultânea à espontânea gera um QRS HÍBRIDO (morfologia intermediária entre o capturado e o espontâneo). Pseudofusão = a espícula cai sobre um QRS/onda P espontâneo já formado, sem alterar sua morfologia (QRS idêntico ao espontâneo).",
+ explain:"Nenhuma das duas é disfunção, mas devem ser notificadas no laudo para eventual ajuste de programação. Na pseudofusão a espícula é 'inútil' (cai sobre tecido já despolarizado); na fusão há contribuição real dos dois.",
+ thm:"Fusão = QRS híbrido (os dois contribuem). Pseudofusão = espícula sobre QRS próprio, sem deformá-lo. Nenhuma é disfunção."},
+
+/* BLOCO 4 — Disfunções e fenômenos */
+{block:"Disfunções do DCEI",type:"mc",
+ q:"O que caracteriza a PERDA DE CAPTURA (perda de comando)?",
+ options:[
+   "Espícula seguida de QRS normal",
+   "Espícula que não consegue despolarizar o miocárdio (sem captura), apesar de condições favoráveis",
+   "Ausência total de espícula",
+   "Aumento fisiológico da FC ao esforço"],
+ correct:1,
+ answer:"Incapacidade de a espícula provocar despolarização atrial/ventricular.",
+ explain:"Causas: aumento do limiar de estimulação, disfunção do cabo-eletrodo (fratura/deslocamento), disfunção do gerador ou programação inadequada (energia insuficiente). No ECG: espícula sem QRS/onda P correspondente.",
+ thm:"Perda de captura = espícula presente, mas SEM despolarização. Pensar limiar/eletrodo/gerador/energia."},
+
+{block:"Disfunções do DCEI",type:"mc",
+ q:"O que é OVERSENSING de onda T?",
+ options:[
+   "Falha em sentir uma onda R espontânea",
+   "O MP interpreta a onda T (própria ou de captura) como se fosse uma onda R, inibindo-se indevidamente",
+   "Estimulação sobre a onda T",
+   "Perda de captura ventricular"],
+ correct:1,
+ answer:"Sensibilidade exagerada em que a onda T é 'vista' como onda R, gerando reset do contador e pausas.",
+ explain:"O <b>oversensing</b> (sensibilidade exagerada) pode ser por miopotenciais, interferência magnética ou pela própria onda T. Resulta em intervalos de estimulação maiores que o de escape (pausas inapropriadas). Já o <b>undersensing</b> é o oposto: o MP não reconhece a despolarização espontânea e deflagra espículas que não respeitam ondas P/R.",
+ thm:"Oversensing = sente demais (inibe indevido, pausas). Undersensing = sente de menos (espícula competindo). T 'vista' como R = oversensing de T."},
+
+{block:"Disfunções do DCEI",type:"mc",
+ q:"Por que o UNDERSENSING ventricular pode ser perigoso?",
+ options:[
+   "Causa apenas pausas benignas",
+   "A espícula pode cair sobre a onda T (período vulnerável) e deflagrar arritmia ventricular grave",
+   "Aumenta a captura",
+   "Reduz a frequência basal"],
+ correct:1,
+ answer:"A espícula não inibida pode incidir sobre o período vulnerável (onda T) e desencadear arritmia ventricular grave.",
+ explain:"No undersensing, o MP não reconhece o batimento próprio e dispara em momento inadequado — se a espícula cair sobre a onda T (fenômeno R-sobre-T), pode induzir TV/FV. É a disfunção de sensibilidade com maior potencial de gravidade.",
+ thm:"Undersensing → espícula sobre onda T → risco de TV/FV (R-sobre-T)."},
+
+{block:"Disfunções do DCEI",type:"mc",
+ q:"A 'taquicardia mediada pelo marca-passo' (TMM) ocorre por qual mecanismo?",
+ options:[
+   "Oversensing de miopotenciais",
+   "Movimento circular: onda P retrógrada sentida pelo átrio deflagra o ventrículo, com o MP como ramo anterógrado",
+   "Perda de captura intermitente",
+   "Ativação do sensor de movimento"],
+ correct:1,
+ answer:"Arritmia por reentrada em que o MP é o ramo anterógrado e a condução VA retrógrada é o ramo retrógrado, disparada por onda P retrógrada.",
+ explain:"Pode ocorrer mesmo no BAVT, desde que haja condução ventrículo-atrial. Resolve-se por programação, <b>aumentando o PVARP</b> (período refratário atrial pós-ventricular), que existe justamente para impedir essa taquicardia. Diferente da taquicardia 'conduzida' (segue uma taquiarritmia atrial real).",
+ thm:"TMM = MP vira o 'feixe anômalo' de um circuito reentrante. Trata aumentando o PVARP."},
+
+{block:"Disfunções do DCEI",type:"mc",
+ q:"Na programação de fábrica, em que faixa de frequência supraventricular o 'Wenckebach eletrônico' costuma ser ativado?",
+ options:[
+   "80–90 pulsos/min",
+   "100–110 pulsos/min",
+   "120–130 pulsos/min",
+   "150–160 pulsos/min"],
+ correct:2,
+ answer:"Entre 120–130 pulsos/min (programação de fábrica).",
+ explain:"Ao atingir o limite máximo de frequência, o MP bloqueia parte dos estímulos supraventriculares — pode ser 2:1 ou simulando Wenckebach ('Wenckebach eletrônico'). É um <b>comportamento normal</b> de proteção, não disfunção, mas precisa ser reconhecido para não ser confundido com BAV patológico.",
+ thm:"Wenckebach eletrônico ~120–130/min = proteção normal ao atingir a FC máxima, não disfunção."},
+
+{block:"Disfunções do DCEI",type:"mc",
+ q:"O que é o AMS (automatic mode switching) e qual cuidado de programação ele exige para o esforço?",
+ options:[
+   "Troca o MP para modo assíncrono fixo; nenhum cuidado",
+   "Muda de modo sincronizado (DDD) para não sincronizado (VVI/DDI) ao detectar taquiarritmia atrial; deve manter o sensor (VVIR/DDIR)",
+   "Desliga o MP durante arritmias",
+   "Aumenta a energia de captura"],
+ correct:1,
+ answer:"Algoritmo que troca DDD→VVI/DDI ao detectar taquiarritmia atrial paroxística; a programação deve incluir o sensor (VVIR/DDIR).",
+ explain:"Sem o sensor ativado, se uma arritmia atrial dispara o AMS durante o esforço, o MP deixa de seguir o átrio e a FC pode <b>cair abruptamente</b> bem na hora que o paciente precisa de débito. Por isso recomenda-se VVIR/DDIR mesmo em quem tem boa resposta cronotrópica sinusal.",
+ thm:"AMS protege de taquiarritmia atrial trocando o modo; sempre com sensor (R) para não despencar a FC no esforço."},
+
+/* BLOCO 5 — TE no portador de CDI */
+{block:"TE no portador de CDI",type:"mc",
+ q:"Qual a FC-alvo de interrupção do TE no portador de CDI, segundo a metodologia do Dante Pazzanese?",
+ options:[
+   "10 bpm ACIMA da VT1",
+   "10 batimentos ABAIXO da VT1 (1ª zona de diagnóstico do CDI)",
+   "85% da FCmáx prevista",
+   "Na exaustão, sempre"],
+ correct:1,
+ answer:"Interromper ao atingir FC 10 bpm abaixo da VT1, mesmo sem exaustão ou outros critérios.",
+ explain:"A <b>VT1</b> é a 1ª zona de diagnóstico do CDI (taquicardia ventricular 1); nessa faixa geralmente há apenas 'observação' do dispositivo, mas para-se 10 bpm antes por segurança. Se o objetivo for ultrapassar a VT1, é necessária a presença do cardiologista que programou o dispositivo na sala.",
+ thm:"CDI: teto = VT1 − 10 bpm. Acima da VT1 só com o eletrofisiologista/programador presente."},
+
+{block:"TE no portador de CDI",type:"mc",
+ q:"Quais cuidados específicos o artigo recomenda na sala durante o TE de portador de CDI?",
+ options:[
+   "Nenhum cuidado especial",
+   "Luvas isolantes (ex.: látex) durante o exame e um ímã disponível para terapias inapropriadas",
+   "Manter o paciente em jejum de 12h",
+   "Sedação leve de rotina"],
+ correct:1,
+ answer:"Uso de luvas isolantes durante todo o exame e ímã disponível na sala (para terapias inapropriadas).",
+ explain:"As luvas evitam que o ergometrista seja atingido por eventual terapia elétrica. O ímã deve ter tamanho semelhante ao do CDI e boa capacidade magnética, pois o CDI costuma ser submuscular (mais profundo que o MP, menos sensível a ímã superficial).",
+ thm:"CDI na ergometria: luvas isolantes + ímã do tamanho do dispositivo à mão."},
+
+{block:"TE no portador de CDI",type:"open",
+ q:"Como conduzir a ocorrência de uma terapia INAPROPRIADA do CDI durante o TE?",
+ answer:"Interromper imediatamente o exame, deitar o paciente, atuar conforme ACLS/TECA e, se a terapia for inapropriada, colocar o ímã sobre o CDI por ~1 min (suspende as terapias, e o CDI passa a funcionar como MP convencional). Na dúvida se é apropriada ou não, NÃO usar o ímã. Solicitar telemetria do dispositivo em urgência.",
+ explain:"O ímã inibe as terapias de choque enquanto está sobre o gerador. A regra de ouro: só usar o ímã quando há certeza de que a terapia é inapropriada — se a TV/FV for real (terapia apropriada), o ímã suspenderia um choque necessário.",
+ thm:"Terapia inapropriada: ímã ~1 min suspende. Na dúvida, NÃO use o ímã. Sempre telemetria urgente."},
+
+/* BLOCO 6 — RC e TE x TCP */
+{block:"RC & TE vs TCP",type:"mc",
+ q:"Qual o principal valor do TE no portador de ressincronizador (RC)?",
+ options:[
+   "Investigar DAC pelo ST",
+   "Avaliar a capacidade funcional aeróbica (pacientes quase todos com IC crônica sintomática) e flagrar eventos no QRS",
+   "Substituir a telemetria",
+   "Definir indicação de transplante isoladamente"],
+ correct:1,
+ answer:"Avaliação da capacidade funcional aeróbica (perfil de IC crônica sintomática) e identificação de eventos sérios pela morfologia do QRS ao esforço.",
+ explain:"Quase todos os portadores de RC têm IC crônica com sintomas exuberantes, então a capacidade funcional é o foco. A morfologia do QRS merece atenção especial: o esforço pode revelar perda de comando intermitente de um eletrodo ou eventos graves.",
+ thm:"RC: foco na capacidade funcional (IC) + vigiar a morfologia do QRS no esforço."},
+
+{block:"RC & TE vs TCP",type:"mc",
+ q:"Comparando TE e TCP em portadores de DCEI, por que o TE permanece o método mais utilizado?",
+ options:[
+   "Porque o TCP é menos preciso",
+   "Pelo menor custo do TE e pelo número reduzido de publicações comparando TE x TCP nessa população",
+   "Porque o TCP é contraindicado em DCEI",
+   "Porque o TE mede trocas gasosas"],
+ correct:1,
+ answer:"O TCP é mais preciso na capacidade aeróbica (mede trocas gasosas e volume de ar), mas o menor custo do TE e a escassez de estudos comparativos mantêm o TE como o mais usado.",
+ explain:"O TCP agrega análise de O₂/CO₂ e ventilação, dando avaliação mais fina da capacidade funcional — vantagem real nesse perfil de IC. Ainda assim, custo e falta de evidência comparativa específica para DCEI sustentam o predomínio do TE.",
+ thm:"TCP = mais preciso (trocas gasosas), mas TE vence por custo e por falta de estudos comparativos em DCEI."}
+];
+
+/* ============ ESTADO ============ */
+const TOTAL = QUESTIONS.length;
+const STORE = "dcei_quiz_2014_v1";
+
+function shuffle(arr){
+  const a=arr.slice();
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+// cria uma nova "rodada" embaralhada: ordem das questões + ordem das opções de cada questão
+function freshState(){
+  const order = shuffle([...Array(TOTAL).keys()]);   // ordem em que as questões aparecem
+  const optOrder = QUESTIONS.map(Q => Q.type==="mc" ? shuffle([...Array(Q.options.length).keys()]) : null);
+  return { idx:0, order, optOrder, answers:new Array(TOTAL).fill(null) };
+}
+let state = freshState();
+
+function load(){
+  try{
+    const s=JSON.parse(localStorage.getItem(STORE));
+    if(s && s.answers && s.answers.length===TOTAL && s.order && s.optOrder){ state=s; }
+  }catch(e){}
+}
+function save(){ try{ localStorage.setItem(STORE, JSON.stringify(state)); }catch(e){} }
+load();
+
+// helpers de indireção: posição na sequência -> questão real
+const qAt = pos => QUESTIONS[state.order[pos]];
+const optOrderAt = pos => state.optOrder[state.order[pos]];
+
+/* ============ ELEMENTOS ============ */
+const slot=document.getElementById("cardSlot");
+const pfill=document.getElementById("pfill");
+const pcount=document.getElementById("pcount");
+const prevBtn=document.getElementById("prevBtn");
+const nextBtn=document.getElementById("nextBtn");
+const quizArea=document.getElementById("quizArea");
+const resultArea=document.getElementById("resultArea");
+const pad=n=>String(n).padStart(2,"0");
+
+/* ============ RENDER QUESTÃO ============ */
+function render(){
+  resultArea.innerHTML=""; quizArea.style.display="";
+  const pos=state.idx, Q=qAt(pos), ans=state.answers[pos];
+  const answered = ans!==null;
+
+  pfill.style.width = ((pos)/TOTAL*100)+"%";
+  pcount.textContent = pad(pos+1)+" / "+pad(TOTAL);
+
+  let html = `<div class="card">
+    <div class="qtop">
+      <span class="qnum">Q${pad(pos+1)}</span>
+      <span class="qtag">${Q.block}</span>
+    </div>
+    <p class="qtext">${Q.q}</p>`;
+
+  if(Q.type==="mc"){
+    const ord = optOrderAt(pos);   // ordem embaralhada das opções (índices reais)
+    html += `<div class="opts">`;
+    ord.forEach((realIdx,displayPos)=>{
+      const letter=String.fromCharCode(65+displayPos);
+      let cls="opt", mark="";
+      if(answered){
+        if(realIdx===Q.correct){cls+=" correct"; mark="✓";}
+        else if(realIdx===ans.given){cls+=" wrong"; mark="✕";}
+      }
+      html+=`<button class="${cls}" data-oi="${realIdx}" ${answered?"disabled":""}>
+        <span class="key">${letter}</span><span>${Q.options[realIdx]}</span>${mark?`<span class="mark">${mark}</span>`:""}</button>`;
+    });
+    html+=`</div>`;
+  } else {
+    // open / self-assess
+    if(!answered){
+      html += `<button class="reveal-btn" id="revealBtn">Mostrar resposta</button>`;
+    }
+  }
+
+  // feedback
+  if(answered || (Q.type==="open" && ans!==null)){
+    html += feedbackHTML(Q, ans);
+  }
+
+  html += `</div>`;
+  slot.innerHTML=html;
+
+  // bind
+  if(Q.type==="mc" && !answered){
+    slot.querySelectorAll(".opt").forEach(b=>{
+      b.addEventListener("click",()=>choose(parseInt(b.dataset.oi)));
+    });
+  }
+  if(Q.type==="open" && !answered){
+    const rb=document.getElementById("revealBtn");
+    if(rb) rb.addEventListener("click",revealOpen);
+  }
+
+  // nav state
+  prevBtn.disabled = pos===0;
+  prevBtn.style.visibility = pos===0 ? "hidden":"visible";
+  const isLast = pos===TOTAL-1;
+  nextBtn.textContent = isLast ? "Ver resultado →" : "Próxima →";
+  nextBtn.disabled = !answered;
+  save();
+}
+
+function feedbackHTML(Q, ans){
+  let v="";
+  if(Q.type==="mc"){
+    const ok=ans.correct;
+    v=`<div class="verdict ${ok?'ok':'no'}"><span class="dot"></span>${ok?'Correto':'Incorreto'}</div>`;
+  } else {
+    if(ans.correct===true) v=`<div class="verdict ok"><span class="dot"></span>Você marcou: acertei</div>`;
+    else if(ans.correct===false) v=`<div class="verdict no"><span class="dot"></span>Você marcou: errei</div>`;
+    else v=`<div class="verdict ok"><span class="dot"></span>Resposta revelada</div>`;
+  }
+  return `<div class="fb">
+    ${v}
+    <div class="ans"><b>Resposta.</b> ${Q.answer}</div>
+    <p class="block-label">Comentário</p>
+    <p class="explain">${Q.explain}</p>
+    <div class="thm"><span class="ico">🎯</span><div class="body"><strong>Take home</strong>${Q.thm}</div></div>
+    ${Q.type==="open" && ans.correct===null ? selfAssessHTML() : ""}
+  </div>`;
+}
+
+function selfAssessHTML(){
+  return `<div class="selfrow">
+    <button class="self-hit" id="selfHit">Acertei ✓</button>
+    <button class="self-miss" id="selfMiss">Errei ✕</button>
+  </div>`;
+}
+
+function choose(realIdx){
+  const pos=state.idx, Q=qAt(pos);
+  state.answers[pos]={given:realIdx, correct: realIdx===Q.correct};
+  save(); render();
+}
+
+function revealOpen(){
+  const pos=state.idx;
+  state.answers[pos]={given:null, correct:null}; // revelada, aguardando auto-avaliação
+  save(); render();
+  // bind self-assess buttons
+  const h=document.getElementById("selfHit"), m=document.getElementById("selfMiss");
+  if(h) h.addEventListener("click",()=>{state.answers[pos].correct=true; save(); render();});
+  if(m) m.addEventListener("click",()=>{state.answers[pos].correct=false; save(); render();});
+}
+
+/* ============ NAV ============ */
+nextBtn.addEventListener("click",()=>{
+  if(state.idx===TOTAL-1){ showResult(); }
+  else { state.idx++; render(); window.scrollTo({top:0,behavior:'smooth'}); }
+});
+prevBtn.addEventListener("click",()=>{
+  if(state.idx>0){ state.idx--; render(); window.scrollTo({top:0,behavior:'smooth'}); }
+});
+
+/* ============ RESULTADO ============ */
+function showResult(){
+  quizArea.style.display="none";
+  pfill.style.width="100%";
+  const scored = state.answers.filter(a=>a&&a.correct!==null);
+  const hits = state.answers.filter(a=>a&&a.correct===true).length;
+  const total = scored.length || TOTAL;
+  const pct = Math.round(hits/ (scored.length||1) *100);
+  const missed = [];
+  state.answers.forEach((a,i)=>{ if(a&&a.correct===false) missed.push(i); });
+
+  let msg, color;
+  if(pct>=85){msg="Pronta pra encarar o chefe. Mandou bem demais."; color="var(--good)";}
+  else if(pct>=70){msg="Bom nível — revise os erros e fecha o ciclo."; color="var(--gold)";}
+  else if(pct>=50){msg="Caminho certo. Foque nos blocos que mais escaparam."; color="var(--gold)";}
+  else {msg="Hora de revisar a diretriz com calma e refazer."; color="var(--pulse)";}
+
+  // ring
+  const r=52, c=2*Math.PI*r, off=c*(1-pct/100);
+  const ring=`<svg class="score-ring" width="140" height="140" viewBox="0 0 140 140">
+    <circle cx="70" cy="70" r="${r}" fill="none" stroke="#e7e1d5" stroke-width="12"/>
+    <circle cx="70" cy="70" r="${r}" fill="none" stroke="${color}" stroke-width="12"
+      stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${c}"
+      transform="rotate(-90 70 70)" style="transition:stroke-dashoffset 1.1s cubic-bezier(.3,.8,.3,1)" id="ringFill"/>
+    <text x="70" y="78" text-anchor="middle" font-size="30" font-weight="700"
+      font-family="ui-monospace,monospace" fill="${color}">${pct}%</text>
+  </svg>`;
+
+  // ----- diagnóstico por bloco/assunto -----
+  const blocks={};
+  state.answers.forEach((a,pos)=>{
+    if(!a || a.correct===null) return;          // só pontuadas
+    const b=qAt(pos).block;
+    if(!blocks[b]) blocks[b]={hit:0,tot:0};
+    blocks[b].tot++; if(a.correct===true) blocks[b].hit++;
+  });
+  const blockRows=Object.keys(blocks).map(b=>{
+    const o=blocks[b]; const p=Math.round(o.hit/o.tot*100);
+    let lvl,lc;
+    if(p>=80){lvl="Dominado";lc="var(--good)";}
+    else if(p>=50){lvl="Revisar";lc="var(--gold)";}
+    else {lvl="Estudar";lc="var(--pulse)";}
+    return {b,p,lvl,lc,hit:o.hit,tot:o.tot};
+  }).sort((a,z)=>a.p-z.p); // pior primeiro
+
+  const toStudy=blockRows.filter(r=>r.p<80);
+
+  let diagHTML="";
+  if(blockRows.length){
+    diagHTML=`<div class="diag">
+      <p class="block-label" style="margin-bottom:12px">Desempenho por assunto</p>
+      ${blockRows.map(r=>`
+        <div class="diag-row">
+          <div class="diag-head">
+            <span class="diag-name">${r.b}</span>
+            <span class="diag-tag" style="color:${r.lc};border-color:${r.lc}">${r.lvl}</span>
+          </div>
+          <div class="diag-bar"><div class="diag-fill" style="width:0" data-w="${r.p}" data-c="${r.lc}"></div></div>
+          <span class="diag-frac mono">${r.hit}/${r.tot} · ${r.p}%</span>
+        </div>`).join("")}
+    </div>`;
+  }
+
+  let focusHTML="";
+  if(toStudy.length){
+    focusHTML=`<div class="focus">
+      <div class="focus-head"><span>📌</span> Prioridade de estudo</div>
+      <p class="focus-sub">Com base nos seus erros, foque nestes assuntos da diretriz, do mais urgente ao menos:</p>
+      <ol class="focus-list">
+        ${toStudy.map(r=>`<li><span class="fl-name">${r.b}</span> <span class="fl-meta mono" style="color:${r.lc}">${r.p}%</span></li>`).join("")}
+      </ol>
+    </div>`;
+  } else if(blockRows.length){
+    focusHTML=`<div class="focus all-good">
+      <div class="focus-head"><span>✅</span> Sem pontos fracos evidentes</div>
+      <p class="focus-sub">Você ficou ≥80% em todos os assuntos avaliados. Mantém a revisão dos números-chave e segue firme.</p>
+    </div>`;
+  }
+
+  let missedHTML="";
+  if(missed.length){
+    missedHTML=`<div class="missed-list" id="missedList">
+      <h3>Questões erradas (${missed.length})</h3>
+      ${missed.map(pos=>`<div class="missed-item" data-i="${pos}">
+        <span class="mn">Q${pad(pos+1)}</span><span>${qAt(pos).q.slice(0,90)}${qAt(pos).q.length>90?'…':''}</span></div>`).join("")}
+    </div>`;
+  }
+
+  resultArea.innerHTML=`<div class="card result">
+    ${ring}
+    <h2>Resultado</h2>
+    <p class="sub">${hits} de ${scored.length||TOTAL} corretas${scored.length<TOTAL?` · (${TOTAL-scored.length} não pontuadas)`:""}</p>
+    <p class="verdict-msg" style="color:${color}">${msg}</p>
+    <div class="result-stats">
+      <div class="stat hit"><span class="n">${hits}</span><span class="l">Acertos</span></div>
+      <div class="stat miss"><span class="n">${missed.length}</span><span class="l">Erros</span></div>
+      <div class="stat"><span class="n">${pct}%</span><span class="l">Aproveitamento</span></div>
+    </div>
+    ${focusHTML}
+    ${diagHTML}
+    <div class="actions">
+      ${missed.length?`<button class="review" id="reviewBtn">Revisar questões erradas</button>`:""}
+      <button class="again" id="againBtn">Refazer simulado</button>
+    </div>
+    ${missedHTML}
+  </div>`;
+
+  // anima as barras do diagnóstico
+  requestAnimationFrame(()=>{
+    resultArea.querySelectorAll(".diag-fill").forEach((el,k)=>{
+      setTimeout(()=>{ el.style.width=el.dataset.w+"%"; el.style.background=el.dataset.c; }, 120+k*70);
+    });
+  });
+
+  requestAnimationFrame(()=>{ const rf=document.getElementById("ringFill"); if(rf) rf.style.strokeDashoffset=off; });
+  window.scrollTo({top:0,behavior:'smooth'});
+
+  const ag=document.getElementById("againBtn");
+  if(ag) ag.addEventListener("click",resetAll);
+  const rv=document.getElementById("reviewBtn");
+  if(rv) rv.addEventListener("click",()=>{ document.getElementById("missedList").classList.toggle("show"); });
+  resultArea.querySelectorAll(".missed-item").forEach(it=>{
+    it.addEventListener("click",()=>{ state.idx=parseInt(it.dataset.i); render(); window.scrollTo({top:0,behavior:'smooth'}); });
+  });
+  save();
+}
+
+function resetAll(){
+  state=freshState();   // nova rodada: reembaralha questões e opções
+  save(); render(); window.scrollTo({top:0,behavior:'smooth'});
+}
+
+document.getElementById("resetBtn").addEventListener("click",()=>{
+  if(confirm("Recomeçar do zero? Seu progresso atual será apagado.")) resetAll();
+});
+
+/* ============ START ============ */
+render();
+</script>
+</body>
+</html>
